@@ -12,7 +12,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 
 from src import utils
-from src.Order import Order
+from src.Data import Order, Item
 
 
 def main():
@@ -65,7 +65,7 @@ def main():
         print(f'finished year {datetime.datetime.now().year + 2 - order_filter_index}, ({round((order_filter_index - 1.0 ) / (max_index - 1.0) * 100)}%)')
 
     print(orders)
-    utils.save_file('orders.json', json.dumps([order.__dict__ for order in orders]))
+    utils.save_file('orders.json', json.dumps([order.to_dict() for order in orders]))
 
     close(browser)
 
@@ -138,26 +138,35 @@ def scrape_page_for_orders(browser: WebDriver) -> List[Order]:
             order_id = order_info_list[3]
 
         # price is usually formatted as 'EUR x,xx' but special cases as 'Audible Guthaben' are possible as well
-        price = order_info_list[1]
-        if price.find('EUR') != -1:
-            price = price[4:]
+        order_price = order_info_list[1]
+        if order_price.find('EUR') != -1:
+            order_price = price_str_to_float(order_price)
         else:
-            price = 0
+            order_price = 0
 
         date = order_info_list[0]
 
-        try:
-            order_shipment_element = order_element.find_element_by_class_name('shipment')
-            order_title_element = order_shipment_element.find_element_by_class_name('a-col-right') \
-                .find_element_by_class_name('a-row')
-            link = order_title_element.find_element_by_class_name('a-link-normal').get_attribute('href')
-            title = order_title_element.text
-        except NoSuchElementException:
-            # print(f'no title for "{order_id}" available')
-            link = 'not available'
-            title = 'not available'
+        items = []
+        for item_element in order_element.find_elements_by_class_name('shipment'):
+            try:
+                item_title_element = item_element.find_element_by_class_name('a-col-right') \
+                    .find_element_by_class_name('a-row')
+                link = item_title_element.find_element_by_class_name('a-link-normal').get_attribute('href')
+                title = item_title_element.text
+            except NoSuchElementException:
+                # print(f'no title for "{order_id}" available')
+                link = 'not available'
+                title = 'not available'
 
-        orders.append(Order(order_id, price, date, link, title))
+            try:
+                item_price_str = item_element.find_element_by_class_name('a-color-price').text
+                item_price = price_str_to_float(item_price_str)
+            except NoSuchElementException:
+                item_price = 0.0
+
+            items.append(Item(item_price, link, title))
+        orders.append(Order(order_id, order_price, date, items))
+
     return orders
 
 
@@ -192,6 +201,9 @@ def wait_for_element_by_class_name(browser: WebDriver, class_name: str, timeout:
     except TimeoutException:
         print(f'Loading took too much time! (>{timeout}sec)')
         return False
+
+def price_str_to_float(price_str) -> float:
+    return float((price_str[4:]).replace(',', '.'))
 
 
 def close(browser):
