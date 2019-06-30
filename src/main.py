@@ -13,11 +13,12 @@ from src.Order import Order
 
 def main():
 
-    email, password = parse_cli_arguments()
+    email, password, headless = parse_cli_arguments()
 
     opts = Options()
-    # opts.headless = True
-    # assert opts.headless
+    opts.headless = headless
+    if opts.headless:
+        print("Run in headless mode.")
     browser = Firefox(options=opts)
 
     navigate_to_orders_page(browser)
@@ -66,8 +67,11 @@ def parse_cli_arguments():
     arg_parser = argparse.ArgumentParser(description='Scrapes your Amazon.de order history')
     arg_parser.add_argument('--email', type=str, help='the users email adress')
     arg_parser.add_argument('--password', type=str, help='the users password')
+    arg_parser.add_argument('--headless', action='store_true', help='run the browser in headless mode (browser is invisible)')
 
-    return getattr(arg_parser.parse_args(), 'email'), getattr(arg_parser.parse_args(), 'password')
+    return getattr(arg_parser.parse_args(), 'email'), \
+           getattr(arg_parser.parse_args(), 'password'), \
+           getattr(arg_parser.parse_args(), 'headless')
 
 
 def navigate_to_orders_page(browser):
@@ -119,6 +123,9 @@ def scrape_page_for_orders(browser) -> List[Order]:
         else:
             id = order_info_list[3]
 
+        # ToDo extract order title
+        title = ''
+
         # price is usually formated as 'EUR x,xx' but special cases as 'Audible Guthaben' are possible as well
         price = order_info_list[1]
         if price.find('EUR'):
@@ -133,12 +140,12 @@ def scrape_page_for_orders(browser) -> List[Order]:
             order_shipment_element = order_element.find_element_by_class_name('shipment')
             order_title_element = order_shipment_element.find_element_by_class_name('a-link-normal')
 
-            title = order_title_element.get_attribute('href')
+            link = order_title_element.get_attribute('href')
         except NoSuchElementException:
             print(f'no title for "{id}" available')
-            title = 'not available'
+            link = 'not available'
 
-        orders.append(Order(id, price, date, title))
+        orders.append(Order(id, price, date, link, title))
     return orders
 
 
@@ -146,7 +153,6 @@ def is_next_page_available(browser):
     """ as long as the next page button exists there is a next page """
     pagination_element = browser.find_element_by_class_name('a-pagination')
     try:
-        print(pagination_element.find_element_by_class_name('a-disabled').text)
         return 'Weiter' not in pagination_element.find_element_by_class_name('a-disabled').text
     except NoSuchElementException:
         return True
