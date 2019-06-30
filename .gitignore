@@ -1,0 +1,4 @@
+.idea/
+.pytype/
+geckodriver.log
+src/__pycache__/
