@@ -1,3 +1,4 @@
+import datetime
 import json
 from typing import List, Tuple
 import argparse
@@ -15,7 +16,7 @@ from src.Order import Order
 
 
 def main():
-    email, password, headless = parse_cli_arguments()
+    email, password, headless, DEBUG = parse_cli_arguments()
 
     opts = Options()
     opts.headless = headless
@@ -35,18 +36,21 @@ def main():
 
     orders = []
     # order filter option 0 and 1 are already contained in option 2 [3months, 6months, currYear, lastYear, ...]
-    for index_order_filter in range(2, 3):
+    # current year - first year + first index
+    max_index = datetime.datetime.now().year - 2010 + 2
+    if DEBUG: max_index = 3
+    for order_filter_index in range(2, max_index):
         # open the dropdown
-
         wait_for_element_by_id(browser, 'a-autoid-1-announce')
         browser.find_element_by_id('a-autoid-1-announce').click()
 
         # select and click on a order filter
-        id_order_filter = f'orderFilter_{index_order_filter}'
+        id_order_filter = f'orderFilter_{order_filter_index}'
+        wait_for_element_by_id(browser, id_order_filter)
         dropdown_element = browser.find_element_by_id(id_order_filter)
         dropdown_element.click()
 
-        pages_remaining = True
+        pages_remaining = are_orders_for_year_available(browser)
         while pages_remaining:
 
             orders.extend(scrape_page_for_orders(browser))
@@ -58,6 +62,7 @@ def main():
                 next_page_link = pagination_element.find_element_by_class_name('a-last') \
                     .find_element_by_css_selector('a').get_attribute('href')
                 browser.get(next_page_link)
+        print(f'finished year {datetime.datetime.now().year + 2 - order_filter_index}, ({round((order_filter_index - 1.0 ) / (max_index - 1.0) * 100)}%)')
 
     print(orders)
     utils.save_file('orders.json', json.dumps([order.__dict__ for order in orders]))
@@ -65,16 +70,19 @@ def main():
     close(browser)
 
 
-def parse_cli_arguments() -> Tuple[str, str, str]:
+def parse_cli_arguments() -> Tuple[str, str, bool, bool]:
     arg_parser = argparse.ArgumentParser(description='Scrapes your Amazon.de order history')
     arg_parser.add_argument('--email', type=str, help='the users email address')
     arg_parser.add_argument('--password', type=str, help='the users password')
     arg_parser.add_argument('--headless', action='store_true',
                             help='run the browser in headless mode (browser is invisible)')
+    arg_parser.add_argument('--debug', action='store_true',
+                            help='enables debug mode, only data for one year gets scraped')
 
     return getattr(arg_parser.parse_args(), 'email'), \
-        getattr(arg_parser.parse_args(), 'password'),\
-        getattr(arg_parser.parse_args(), 'headless')
+        getattr(arg_parser.parse_args(), 'password'), \
+        getattr(arg_parser.parse_args(), 'headless'), \
+        getattr(arg_parser.parse_args(), 'debug')
 
 
 def navigate_to_orders_page(browser: WebDriver):
@@ -118,7 +126,8 @@ def scrape_page_for_orders(browser: WebDriver) -> List[Order]:
 
         wait_for_element_by_class_name(order_element, 'order-info', timeout=3)
         order_info_element = order_element.find_element_by_class_name('order-info')
-        order_info_list: List[str] = [info_field.text for info_field in order_info_element.find_elements_by_class_name('value')]
+        order_info_list: List[str] = [info_field.text for info_field in
+                                      order_info_element.find_elements_by_class_name('value')]
 
         # value tags have only generic class names so a constant order is assumed...
         # [date, price, recipient_address, order_id] or if no recipient_address is available
@@ -139,12 +148,12 @@ def scrape_page_for_orders(browser: WebDriver) -> List[Order]:
 
         try:
             order_shipment_element = order_element.find_element_by_class_name('shipment')
-            order_title_element = order_shipment_element.find_element_by_class_name('a-col-right')\
+            order_title_element = order_shipment_element.find_element_by_class_name('a-col-right') \
                 .find_element_by_class_name('a-row')
             link = order_title_element.find_element_by_class_name('a-link-normal').get_attribute('href')
             title = order_title_element.text
         except NoSuchElementException:
-            print(f'no title for "{order_id}" available')
+            # print(f'no title for "{order_id}" available')
             link = 'not available'
             title = 'not available'
 
@@ -159,6 +168,10 @@ def is_next_page_available(browser: WebDriver) -> bool:
         return 'Weiter' not in pagination_element.find_element_by_class_name('a-disabled').text
     except NoSuchElementException:
         return True
+
+
+def are_orders_for_year_available(browser: WebDriver):
+    return browser.page_source.find('keine Bestellungen aufgegeben') == -1
 
 
 def wait_for_element_by_id(browser: WebDriver, order_id: object, timeout: object = 5) -> object:

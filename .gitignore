@@ -1,4 +1,5 @@
 .idea/
 .pytype/
-geckodriver.log
 src/__pycache__/
+geckodriver.log
+orders.json
