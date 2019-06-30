@@ -1,7 +1,8 @@
 # Amazon Order History Web Scraper
 Uses Selenium to simulate login and going through all the users orders. Saves the received data in a json
 file for later evaluation.
-  
+
+Currently only works for the german version of Amazon (amazon.de). For amazon.com users there is already a built in feature to export your data to a csv file.
 
 # usage
 
