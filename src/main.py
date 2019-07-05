@@ -147,24 +147,26 @@ def scrape_page_for_orders(browser: WebDriver) -> List[Order]:
         date = order_info_list[0]
 
         items = []
-        for item_element in order_element.find_elements_by_class_name('shipment'):
-            try:
-                item_title_element = item_element.find_element_by_class_name('a-col-right') \
-                    .find_element_by_class_name('a-row')
-                link = item_title_element.find_element_by_class_name('a-link-normal').get_attribute('href')
-                title = item_title_element.text
-            except NoSuchElementException:
-                # print(f'no title for "{order_id}" available')
-                link = 'not available'
-                title = 'not available'
+        for items_by_seller in order_element.find_elements_by_class_name('shipment'):
+            for item_element in items_by_seller.find_elements_by_class_name('a-fixed-left-grid'):
+                try:
+                    item_title_element = item_element.find_element_by_class_name('a-col-right') \
+                        .find_element_by_class_name('a-row')
+                    link = item_title_element.find_element_by_class_name('a-link-normal').get_attribute('href')
+                    title = item_title_element.text
+                except NoSuchElementException:
+                    # print(f'no title for "{order_id}" available')
+                    link = 'not available'
+                    title = 'not available'
 
-            try:
-                item_price_str = item_element.find_element_by_class_name('a-color-price').text
-                item_price = price_str_to_float(item_price_str)
-            except NoSuchElementException:
-                item_price = 0.0
+                try:
+                    item_price_str = item_element.find_element_by_class_name('a-color-price').text
+                    item_price = price_str_to_float(item_price_str)
+                except (NoSuchElementException, ValueError) as e:
+                    print(f'Could not parse price for order {link}')
+                    item_price = 0.0
 
-            items.append(Item(item_price, link, title))
+                items.append(Item(item_price, link, title))
         orders.append(Order(order_id, order_price, date, items))
 
     return orders
@@ -201,6 +203,7 @@ def wait_for_element_by_class_name(browser: WebDriver, class_name: str, timeout:
     except TimeoutException:
         print(f'Loading took too much time! (>{timeout}sec)')
         return False
+
 
 def price_str_to_float(price_str) -> float:
     return float((price_str[4:]).replace(',', '.'))
