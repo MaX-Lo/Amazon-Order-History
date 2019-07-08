@@ -59,14 +59,15 @@ def main():
             if is_paging_menu_available(browser):
                 pagination_element = browser.find_element_by_class_name('a-pagination')
             else:
-                return
+                break
 
             pages_remaining = is_next_page_available(browser)
             if pages_remaining:
                 next_page_link = pagination_element.find_element_by_class_name('a-last') \
                     .find_element_by_css_selector('a').get_attribute('href')
                 browser.get(next_page_link)
-        print(f'finished year {datetime.datetime.now().year + 2 - order_filter_index}, ({round((order_filter_index - 1.0 ) / (max_index - 1.0) * 100)}%)')
+        print(f'finished year {datetime.datetime.now().year + 2 - order_filter_index}, ({round(
+            (order_filter_index - 1.0) / (max_index - 1.0) * 100)}%)')
 
     utils.save_file('orders.json', json.dumps([order.to_dict() for order in orders]))
 
@@ -83,9 +84,9 @@ def parse_cli_arguments() -> Tuple[str, str, bool, bool]:
                             help='enables debug mode, only data for one year gets scraped')
 
     return getattr(arg_parser.parse_args(), 'email'), \
-        getattr(arg_parser.parse_args(), 'password'), \
-        getattr(arg_parser.parse_args(), 'headless'), \
-        getattr(arg_parser.parse_args(), 'debug')
+           getattr(arg_parser.parse_args(), 'password'), \
+           getattr(arg_parser.parse_args(), 'headless'), \
+           getattr(arg_parser.parse_args(), 'debug')
 
 
 def navigate_to_orders_page(browser: WebDriver):
@@ -192,9 +193,9 @@ def is_next_page_available(browser: WebDriver) -> bool:
 def is_paging_menu_available(browser: WebDriver):
     """ returns whether there are multiple pages for the current year by searching for a paging menu """
     try:
-        return 'Weiter' not in browser.find_element_by_class_name('a-disabled').text
+        return browser.find_element_by_class_name('a-pagination') is not None
     except NoSuchElementException:
-        return True
+        return False
 
 
 def are_orders_for_year_available(browser: WebDriver):
