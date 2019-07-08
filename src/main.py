@@ -56,7 +56,10 @@ def main():
 
             orders.extend(scrape_page_for_orders(browser))
 
-            pagination_element = browser.find_element_by_class_name('a-pagination')
+            if is_paging_menu_available(browser):
+                pagination_element = browser.find_element_by_class_name('a-pagination')
+            else:
+                return
 
             pages_remaining = is_next_page_available(browser)
             if pages_remaining:
@@ -182,6 +185,14 @@ def is_next_page_available(browser: WebDriver) -> bool:
     pagination_element = browser.find_element_by_class_name('a-pagination')
     try:
         return 'Weiter' not in pagination_element.find_element_by_class_name('a-disabled').text
+    except NoSuchElementException:
+        return True
+
+
+def is_paging_menu_available(browser: WebDriver):
+    """ returns whether there are multiple pages for the current year by searching for a paging menu """
+    try:
+        return 'Weiter' not in browser.find_element_by_class_name('a-disabled').text
     except NoSuchElementException:
         return True
 
