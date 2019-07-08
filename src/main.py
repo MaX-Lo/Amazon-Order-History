@@ -8,6 +8,7 @@ from selenium.webdriver import Firefox
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.webdriver import WebDriver
+from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 
@@ -64,7 +65,6 @@ def main():
                 browser.get(next_page_link)
         print(f'finished year {datetime.datetime.now().year + 2 - order_filter_index}, ({round((order_filter_index - 1.0 ) / (max_index - 1.0) * 100)}%)')
 
-    print(orders)
     utils.save_file('orders.json', json.dumps([order.to_dict() for order in orders]))
 
     close(browser)
@@ -126,25 +126,7 @@ def scrape_page_for_orders(browser: WebDriver) -> List[Order]:
 
         wait_for_element_by_class_name(order_element, 'order-info', timeout=3)
         order_info_element = order_element.find_element_by_class_name('order-info')
-        order_info_list: List[str] = [info_field.text for info_field in
-                                      order_info_element.find_elements_by_class_name('value')]
-
-        # value tags have only generic class names so a constant order is assumed...
-        # [date, price, recipient_address, order_id] or if no recipient_address is available
-        # [date, recipient_address, order_id]
-        if len(order_info_list) < 4:
-            order_id = order_info_list[2]
-        else:
-            order_id = order_info_list[3]
-
-        # price is usually formatted as 'EUR x,xx' but special cases as 'Audible Guthaben' are possible as well
-        order_price = order_info_list[1]
-        if order_price.find('EUR') != -1:
-            order_price = price_str_to_float(order_price)
-        else:
-            order_price = 0
-
-        date = order_info_list[0]
+        order_id, order_price, date = get_order_info(order_info_element)
 
         items = []
         for items_by_seller in order_element.find_elements_by_class_name('shipment'):
@@ -155,7 +137,6 @@ def scrape_page_for_orders(browser: WebDriver) -> List[Order]:
                     link = item_title_element.find_element_by_class_name('a-link-normal').get_attribute('href')
                     title = item_title_element.text
                 except NoSuchElementException:
-                    # print(f'no title for "{order_id}" available')
                     link = 'not available'
                     title = 'not available'
 
@@ -170,6 +151,30 @@ def scrape_page_for_orders(browser: WebDriver) -> List[Order]:
         orders.append(Order(order_id, order_price, date, items))
 
     return orders
+
+
+def get_order_info(order_info_element: WebElement) -> Tuple[str, float, datetime.datetime]:
+    order_info_list: List[str] = [info_field.text for info_field in
+                                  order_info_element.find_elements_by_class_name('value')]
+
+    # value tags have only generic class names so a constant order is assumed...
+    # [date, price, recipient_address, order_id] or if no recipient_address is available
+    # [date, recipient_address, order_id]
+    if len(order_info_list) < 4:
+        order_id = order_info_list[2]
+    else:
+        order_id = order_info_list[3]
+
+    # price is usually formatted as 'EUR x,xx' but special cases as 'Audible Guthaben' are possible as well
+    order_price = order_info_list[1]
+    if order_price.find('EUR') != -1:
+        order_price = price_str_to_float(order_price)
+    else:
+        order_price = 0
+
+    date_str = order_info_list[0]
+    date = utils.str_to_datetime(date_str)
+    return order_id, order_price, date
 
 
 def is_next_page_available(browser: WebDriver) -> bool:

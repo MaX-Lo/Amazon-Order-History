@@ -1,35 +1,45 @@
-from json import JSONEncoder
-from typing import List, Any
+import datetime
+from typing import List, Dict
+
+import dateutil
+
+from src import utils
 
 
-class Item():
+class Item:
     def __init__(self, price, link, title):
         self.price = price
         self.link = link
         self.title = title
 
-    def to_dict(self):
+    def to_dict(self) -> Dict:
         return self.__dict__
 
+    @staticmethod
+    def from_dict(item_dict: Dict) -> 'Item':
+        """ returns an item object for a given order as dict """
+        return Item(item_dict['price'], item_dict['link'], item_dict['title'])
 
-class Order():
-    def __init__(self, order_id: str, price: float, date: str, items: List[Item]):
+
+class Order:
+    def __init__(self, order_id: str, price: float, date: datetime.datetime, items: List[Item]):
         self.order_id = order_id
         self.price = price
         self.date = date
         self.items = items
 
-    def to_dict(self):
+    def to_dict(self) -> Dict:
+        """ returns a serializable representation of this order as dict """
         attr_dict = self.__dict__
         attr_dict['items'] = [item.to_dict() for item in self.items]
+        attr_dict['date'] = utils.serialize_date(self.date)
         return attr_dict
 
-
-# pytype doesn't support dataclasses yet
-# @dataclass
-# class Order:
-#     order_id: str
-#     price: float
-#     date: str
-#     link: str
-#     title: str
+    @staticmethod
+    def from_dict(order_dict: Dict) -> 'Order':
+        """ returns an order object for a given order as dict """
+        id = order_dict['order_id']
+        price = float(order_dict['price'])
+        date = dateutil.parser.parse(order_dict['date']) # datetime.datetime.strptime(order_dict['date'], '%Y-%m-%d')
+        items = [Item.from_dict(item) for item in order_dict['items']]
+        return Order(id, price, date, items)
