@@ -11,9 +11,10 @@ from src.Data import Order
 
 
 def main():
+    print(os.path.abspath('../orders.jons'))
     if os.path.exists('../orders.json'):
-        file = open('../orders.json')
-        data = json.load(file)
+        with open('../orders.json') as file:
+            data = json.load(file)
     else:
         print("orders.json not found")
         return

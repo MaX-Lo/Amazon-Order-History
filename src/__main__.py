@@ -4,7 +4,6 @@ import os
 from typing import List, Tuple
 import argparse
 
-import dateutil
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver import Firefox
 from selenium.webdriver.firefox.options import Options
