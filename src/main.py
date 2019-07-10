@@ -18,28 +18,28 @@ from src.Data import Order, Item
 
 def main():
     email, password, headless, DEBUG = parse_cli_arguments()
+    browser = setup_scraping(headless, email, password)
+    orders: List = get_orders(browser)
 
+    utils.save_file('orders.json', json.dumps([order.to_dict() for order in orders]))
+
+    close(browser)
+
+
+def setup_scraping(headless, email, password):
     opts = Options()
     opts.headless = headless
     if opts.headless:
         print("Run in headless mode.")
     browser = Firefox(options=opts)
-
     navigate_to_orders_page(browser)
-
     complete_sign_in_form(browser, email, password)
-
     if not signed_in_successful(browser):
         print("Couldn't sign in. Maybe your credentials are incorrect?")
         close(browser)
-
+        exit()
     skip_adding_phone_number(browser)
-
-    orders = scrape_orders(browser, 2010, 2012)
-
-    utils.save_file('orders.json', json.dumps([order.to_dict() for order in orders]))
-
-    close(browser)
+    return browser
 
 
 def scrape_orders(browser: WebDriver, start_year: int, end_year: int) -> List[Order]:
@@ -54,10 +54,7 @@ def scrape_orders(browser: WebDriver, start_year: int, end_year: int) -> List[Or
     start_index = 2 + (datetime.datetime.now().year - end_year)
     end_index = 2 + (datetime.datetime.now().year - start_year) + 1
 
-    print(start_index, end_index)
-
     for order_filter_index in range(start_index, end_index):
-        print(order_filter_index)
         # open the dropdown
         wait_for_element_by_id(browser, 'a-autoid-1-announce')
         browser.find_element_by_id('a-autoid-1-announce').click()
@@ -83,7 +80,29 @@ def scrape_orders(browser: WebDriver, start_year: int, end_year: int) -> List[Or
                 next_page_link = pagination_element.find_element_by_class_name('a-last') \
                     .find_element_by_css_selector('a').get_attribute('href')
                 browser.get(next_page_link)
-        print(f'finished year {datetime.datetime.now().year + 2 - order_filter_index}, ({round((order_filter_index - 2) / (end_index - 2.0) * 100)}%)')
+        print(f'finished year {datetime.datetime.now().year + 2 - order_filter_index}, ({round((order_filter_index - 1) / (end_index - 2.0) * 100)}%)')
+
+    return orders
+
+
+def get_orders(browser) -> List:
+    orders: List[Order] = []
+    last_order_year = 2010
+    with open("orders.json", 'r') as file:
+        data = json.load(file)
+
+    if data:
+        for order_dict in data:
+            orders.append(Order.from_dict(order_dict))
+        last_order_year = orders[-1].date.year
+
+        scraped_orders: List[Order] = scrape_orders(browser, last_order_year, datetime.datetime.now().year)
+
+        new_orders: List[Order] = list(filter(lambda order: order.order_id in list(map(lambda order: order.order_id, orders)), scraped_orders))
+        orders.extend(new_orders)
+
+    else:
+        orders = scrape_orders(browser, last_order_year, datetime.datetime.now().year)
 
     return orders
 
