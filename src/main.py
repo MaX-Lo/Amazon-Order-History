@@ -35,12 +35,29 @@ def main():
 
     skip_adding_phone_number(browser)
 
+    orders = scrape_orders(browser, 2010, 2012)
+
+    utils.save_file('orders.json', json.dumps([order.to_dict() for order in orders]))
+
+    close(browser)
+
+
+def scrape_orders(browser: WebDriver, start_year: int, end_year: int) -> List[Order]:
+    """ returns list of all orders in between given start year (inclusive) and end year (inclusive) """
+    assert start_year <= end_year, "start year must be before end year"
+    assert start_year >= 2010, "Amazon order history works only for years after 2009"
+    assert end_year <= datetime.datetime.now().year, "End year can not be in the future"
+
     orders = []
+
     # order filter option 0 and 1 are already contained in option 2 [3months, 6months, currYear, lastYear, ...]
-    # current year - first year + first index
-    max_index = datetime.datetime.now().year - 2010 + 2
-    if DEBUG: max_index = 3
-    for order_filter_index in range(2, max_index):
+    start_index = 2 + (datetime.datetime.now().year - end_year)
+    end_index = 2 + (datetime.datetime.now().year - start_year) + 1
+
+    print(start_index, end_index)
+
+    for order_filter_index in range(start_index, end_index):
+        print(order_filter_index)
         # open the dropdown
         wait_for_element_by_id(browser, 'a-autoid-1-announce')
         browser.find_element_by_id('a-autoid-1-announce').click()
@@ -66,12 +83,9 @@ def main():
                 next_page_link = pagination_element.find_element_by_class_name('a-last') \
                     .find_element_by_css_selector('a').get_attribute('href')
                 browser.get(next_page_link)
-        print(f'finished year {datetime.datetime.now().year + 2 - order_filter_index}, ({round(
-            (order_filter_index - 1.0) / (max_index - 1.0) * 100)}%)')
+        print(f'finished year {datetime.datetime.now().year + 2 - order_filter_index}, ({round((order_filter_index - 2) / (end_index - 2.0) * 100)}%)')
 
-    utils.save_file('orders.json', json.dumps([order.to_dict() for order in orders]))
-
-    close(browser)
+    return orders
 
 
 def parse_cli_arguments() -> Tuple[str, str, bool, bool]:
@@ -84,9 +98,9 @@ def parse_cli_arguments() -> Tuple[str, str, bool, bool]:
                             help='enables debug mode, only data for one year gets scraped')
 
     return getattr(arg_parser.parse_args(), 'email'), \
-           getattr(arg_parser.parse_args(), 'password'), \
-           getattr(arg_parser.parse_args(), 'headless'), \
-           getattr(arg_parser.parse_args(), 'debug')
+        getattr(arg_parser.parse_args(), 'password'), \
+        getattr(arg_parser.parse_args(), 'headless'), \
+        getattr(arg_parser.parse_args(), 'debug')
 
 
 def navigate_to_orders_page(browser: WebDriver):
