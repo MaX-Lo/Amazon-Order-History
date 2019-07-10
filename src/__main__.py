@@ -1,5 +1,6 @@
 import datetime
 import json
+import os
 from typing import List, Tuple
 import argparse
 
@@ -18,14 +19,14 @@ from .utils import wait_for_element_by_class_name, wait_for_element_by_id
 def main():
     email, password, headless, start, end, eval = parse_cli_arguments()
 
-    if eval:
-        evaluation.main()
-        return
-
     browser = setup_scraping(headless, email, password)
     orders: List = get_orders(browser, start, end)
 
     utils.save_file('orders.json', json.dumps([order.to_dict() for order in orders]))
+
+    if eval:
+        evaluation.main()
+        return
 
     close(browser)
 
@@ -33,16 +34,23 @@ def main():
 def parse_cli_arguments() -> Tuple[str, str, bool, int, int, bool]:
     arg_parser = argparse.ArgumentParser(description='Scrapes your Amazon.de order history')
     arg_parser.add_argument('--email', type=str, help='the users email address')
-    arg_parser.add_argument('--password', type=str, help='the users password')
+    arg_parser.add_argument('--password', type=str, default="", help='the users password')
     arg_parser.add_argument('--headless', action='store_true',
                             help='run the browser in headless mode (browser is invisible)')
     arg_parser.add_argument('--start', type=int, default=2010, help='the year to start with. If not set 2010 is used.')
     arg_parser.add_argument('--end', type=int, default=datetime.datetime.now().year,
                             help='the year to end with. If not set the current year is used.')
-    arg_parser.add_argument('--eval', action='store_true')
+    arg_parser.add_argument('--eval', action='store_true',
+                            help='Perform evaluation right after fetching the order history.')
+
+    password = getattr(arg_parser.parse_args(), 'password')
+    if len(getattr(arg_parser.parse_args(), 'password')) == 0:
+        if os.path.exists('pw.txt'):
+            file = open('pw.txt')
+            password = file.read()
 
     return (getattr(arg_parser.parse_args(), 'email'),
-            getattr(arg_parser.parse_args(), 'password'),
+            password,
             getattr(arg_parser.parse_args(), 'headless'),
             getattr(arg_parser.parse_args(), 'start'),
             getattr(arg_parser.parse_args(), 'end'),
@@ -72,7 +80,6 @@ def get_orders(browser, start_year: int, end_year: int) -> List[Order]:
         year=end_year, month=12, day=31)
 
     data = utils.read_json_file("orders.json")
-
     if data:
         for order_dict in data:
             orders.append(Order.from_dict(order_dict))
@@ -83,7 +90,7 @@ def get_orders(browser, start_year: int, end_year: int) -> List[Order]:
 
         # check for intersection of fetched orders
         new_orders: List[Order] = list(
-            filter(lambda order: order.order_id in list(map(lambda order: order.order_id, orders)), scraped_orders))
+            filter(lambda order: order.order_id not in list(map(lambda order: order.order_id, orders)), scraped_orders))
         orders.extend(new_orders)
 
     else:
@@ -177,6 +184,31 @@ def scrape_page_for_orders(browser: WebDriver) -> List[Order]:
     return orders
 
 
+def get_order_info(order_info_element: WebElement) -> Tuple[str, float, datetime.datetime]:
+    order_info_list: List[str] = [info_field.text for info_field in
+                                  order_info_element.find_elements_by_class_name('value')]
+
+    # value tags have only generic class names so a constant order in form of:
+    # [date, price, recipient_address, order_id] or if no recipient_address is available
+    # [date, recipient_address, order_id]
+    # is assumed
+    if len(order_info_list) < 4:
+        order_id = order_info_list[2]
+    else:
+        order_id = order_info_list[3]
+
+    # price is usually formatted as 'EUR x,xx' but special cases as 'Audible Guthaben' are possible as well
+    order_price = order_info_list[1]
+    if order_price.find('EUR') != -1:
+        order_price = price_str_to_float(order_price)
+    else:
+        order_price = 0
+
+    date_str = order_info_list[0]
+    date = utils.str_to_datetime(date_str)
+    return order_id, order_price, date
+
+
 def navigate_to_orders_page(browser: WebDriver):
     browser.get('https://www.amazon.de/gp/css/order-history?ref_=nav_orders_first')
 
@@ -209,30 +241,6 @@ def skip_adding_phone_number(browser: WebDriver):
         print('skipped adding phone number')
     except NoSuchElementException:
         print('no need to skip adding phone number')
-
-
-def get_order_info(order_info_element: WebElement) -> Tuple[str, float, datetime.datetime]:
-    order_info_list: List[str] = [info_field.text for info_field in
-                                  order_info_element.find_elements_by_class_name('value')]
-
-    # value tags have only generic class names so a constant order is assumed...
-    # [date, price, recipient_address, order_id] or if no recipient_address is available
-    # [date, recipient_address, order_id]
-    if len(order_info_list) < 4:
-        order_id = order_info_list[2]
-    else:
-        order_id = order_info_list[3]
-
-    # price is usually formatted as 'EUR x,xx' but special cases as 'Audible Guthaben' are possible as well
-    order_price = order_info_list[1]
-    if order_price.find('EUR') != -1:
-        order_price = price_str_to_float(order_price)
-    else:
-        order_price = 0
-
-    date_str = order_info_list[0]
-    date = utils.str_to_datetime(date_str)
-    return order_id, order_price, date
 
 
 def is_next_page_available(browser: WebDriver) -> bool:

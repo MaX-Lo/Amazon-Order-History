@@ -3,4 +3,5 @@
 src/__pycache__/
 geckodriver.log
 orders.json
+pw.txt
 env
