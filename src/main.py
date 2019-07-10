@@ -61,7 +61,8 @@ def setup_scraping(headless, email, password):
 def get_orders(browser, start_year: int, end_year: int) -> List[Order]:
 
     orders: List[Order] = []
-    last_date:datetime.datetime = dateutil.parser.parse("2010-01-01T00:00:00")
+    last_date: datetime.datetime = datetime.datetime(year=start_year, month=1, day=1)
+    end_date: datetime.datetime = datetime.datetime.now() if end_year == datetime.datetime.now().year else datetime.datetime(year=end_year, month=12, day=31)
 
     data = utils.read_json_file("orders.json")
 
@@ -71,14 +72,14 @@ def get_orders(browser, start_year: int, end_year: int) -> List[Order]:
         orders = sorted(orders, key=lambda order: order.date)
         last_date = orders[-1].date
 
-        scraped_orders: List[Order] = scrape_orders(browser, last_date, datetime.datetime.now())
+        scraped_orders: List[Order] = scrape_orders(browser, last_date, end_date)
 
         # check for intersection of fetched orders
         new_orders: List[Order] = list(filter(lambda order: order.order_id in list(map(lambda order: order.order_id, orders)), scraped_orders))
         orders.extend(new_orders)
 
     else:
-        orders = scrape_orders(browser, last_date, datetime.datetime.now())
+        orders = scrape_orders(browser, last_date, end_date)
 
     orders = sorted(orders, key=lambda order: order.date)
     return orders
