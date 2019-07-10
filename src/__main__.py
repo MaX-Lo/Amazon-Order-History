@@ -10,9 +10,9 @@ from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 
-from src import utils
-from src.Data import Order, Item
-from src.utils import wait_for_element_by_class_name, wait_for_element_by_id
+from . import utils, evaluation
+from .Data import Order, Item
+from .utils import wait_for_element_by_class_name, wait_for_element_by_id
 
 
 def main():
@@ -66,10 +66,10 @@ def setup_scraping(headless, email, password):
 
 
 def get_orders(browser, start_year: int, end_year: int) -> List[Order]:
-
     orders: List[Order] = []
     last_date: datetime.datetime = datetime.datetime(year=start_year, month=1, day=1)
-    end_date: datetime.datetime = datetime.datetime.now() if end_year == datetime.datetime.now().year else datetime.datetime(year=end_year, month=12, day=31)
+    end_date: datetime.datetime = datetime.datetime.now() if end_year == datetime.datetime.now().year else datetime.datetime(
+        year=end_year, month=12, day=31)
 
     data = utils.read_json_file("orders.json")
 

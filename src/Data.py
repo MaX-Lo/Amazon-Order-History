@@ -2,7 +2,7 @@ import datetime
 from typing import List, Dict
 import dateutil.parser
 
-from src import utils
+from . import utils
 
 
 class Item:
