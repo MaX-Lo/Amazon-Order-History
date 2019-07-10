@@ -4,6 +4,19 @@ file for later evaluation.
 
 Currently only works for the german version of Amazon (amazon.de). For amazon.com users there is already a built in feature to export your data to a csv file.
 
+# Setup
+
+Clone project
+
+`git clone https://github.com/MaX-Lo/Amazon-Order-History.git`
+
+Install requirements
+
+`cd Amazon-Order-History`
+
+`pip install -r requirements.txt`
+
+Make sure [Geckodriver](https://github.com/mozilla/geckodriver/releases) is in your PATH
 # Usage
 
 When using a computer where you've not logged in before Amazon might requires a confirmation code from an email 
@@ -11,6 +24,7 @@ it has send to you. Therefore it can be necessary to login with your favorite br
 After logging in the first time there shouldn't be anymore email confirmations necessary.
 
 Usage:
-`python -m src --email abc@xy.z --password 123 [--headless]`
+`python main --email abc@xy.z --password 123 [--headless]`
 
 headless - is optional, if specified it starts an invisible crawler  
+
