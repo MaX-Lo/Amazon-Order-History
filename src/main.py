@@ -3,21 +3,19 @@ import json
 from typing import List, Tuple
 import argparse
 
-from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver import Firefox
-from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
-from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.support import expected_conditions as ec
 
 from src import utils
 from src.Data import Order, Item
+from src.utils import wait_for_element_by_class_name, wait_for_element_by_id
 
 
 def main():
-    email, password, headless, DEBUG = parse_cli_arguments()
+    email, password, headless = parse_cli_arguments()
     browser = setup_scraping(headless, email, password)
     orders: List = get_orders(browser)
 
@@ -85,19 +83,22 @@ def scrape_orders(browser: WebDriver, start_year: int, end_year: int) -> List[Or
     return orders
 
 
-def get_orders(browser) -> List:
+def get_orders(browser) -> List[Order]:
+
     orders: List[Order] = []
     last_order_year = 2010
-    with open("orders.json", 'r') as file:
-        data = json.load(file)
+
+    data = utils.read_json_file("orders.json")
 
     if data:
         for order_dict in data:
             orders.append(Order.from_dict(order_dict))
+        # Todo check for actuall date since orders aren't sorted
         last_order_year = orders[-1].date.year
 
         scraped_orders: List[Order] = scrape_orders(browser, last_order_year, datetime.datetime.now().year)
 
+        # check for intersection of fetched orders
         new_orders: List[Order] = list(filter(lambda order: order.order_id in list(map(lambda order: order.order_id, orders)), scraped_orders))
         orders.extend(new_orders)
 
@@ -107,19 +108,16 @@ def get_orders(browser) -> List:
     return orders
 
 
-def parse_cli_arguments() -> Tuple[str, str, bool, bool]:
+def parse_cli_arguments() -> Tuple[str, str, bool]:
     arg_parser = argparse.ArgumentParser(description='Scrapes your Amazon.de order history')
     arg_parser.add_argument('--email', type=str, help='the users email address')
     arg_parser.add_argument('--password', type=str, help='the users password')
     arg_parser.add_argument('--headless', action='store_true',
                             help='run the browser in headless mode (browser is invisible)')
-    arg_parser.add_argument('--debug', action='store_true',
-                            help='enables debug mode, only data for one year gets scraped')
 
     return getattr(arg_parser.parse_args(), 'email'), \
         getattr(arg_parser.parse_args(), 'password'), \
-        getattr(arg_parser.parse_args(), 'headless'), \
-        getattr(arg_parser.parse_args(), 'debug')
+        getattr(arg_parser.parse_args(), 'headless')
 
 
 def navigate_to_orders_page(browser: WebDriver):
@@ -233,26 +231,6 @@ def is_paging_menu_available(browser: WebDriver):
 
 def are_orders_for_year_available(browser: WebDriver):
     return browser.page_source.find('keine Bestellungen aufgegeben') == -1
-
-
-def wait_for_element_by_id(browser: WebDriver, order_id: object, timeout: object = 5) -> object:
-    """ wait the specified timout for a element to load """
-    try:
-        WebDriverWait(browser, timeout).until(ec.presence_of_element_located((By.ID, order_id)))
-        return True
-    except TimeoutException:
-        print(f'Loading took too much time! (>{timeout}sec)')
-        return False
-
-
-def wait_for_element_by_class_name(browser: WebDriver, class_name: str, timeout: float = 5) -> bool:
-    """ wait the specified timout for a element to load """
-    try:
-        WebDriverWait(browser, timeout).until(ec.presence_of_element_located((By.CLASS_NAME, class_name)))
-        return True
-    except TimeoutException:
-        print(f'Loading took too much time! (>{timeout}sec)')
-        return False
 
 
 def price_str_to_float(price_str) -> float:
