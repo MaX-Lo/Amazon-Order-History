@@ -1,3 +1,5 @@
 selenium
 pytype
 python-dateutil
+numpy
+matplotlib

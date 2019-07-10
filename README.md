@@ -4,13 +4,13 @@ file for later evaluation.
 
 Currently only works for the german version of Amazon (amazon.de). For amazon.com users there is already a built in feature to export your data to a csv file.
 
-# usage
+# Usage
 
 When using a computer where you've not logged in before Amazon might requires a confirmation code from an email 
 it has send to you. Therefore it can be necessary to login with your favorite browser before using that script. 
 After logging in the first time there shouldn't be anymore email confirmations necessary.
 
 Usage:
-`python main --email abc@xy.z --password 123 [--headless]`
+`python -m src --email abc@xy.z --password 123 [--headless]`
 
 headless - is optional, if specified it starts an invisible crawler  

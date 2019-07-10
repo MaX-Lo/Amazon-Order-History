@@ -6,7 +6,7 @@ from typing import List, Dict
 import numpy as np
 import matplotlib.pyplot as plt
 
-from src.Data import Order
+from .Data import Order
 
 
 def main():

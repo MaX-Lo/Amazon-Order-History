@@ -3,25 +3,50 @@ import json
 from typing import List, Tuple
 import argparse
 
+import dateutil
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver import Firefox
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 
-from src import utils
-from src.Data import Order, Item
-from src.utils import wait_for_element_by_class_name, wait_for_element_by_id
+from . import utils, evaluation
+from .Data import Order, Item
+from .utils import wait_for_element_by_class_name, wait_for_element_by_id
 
 
 def main():
-    email, password, headless, start, end = parse_cli_arguments()
+    email, password, headless, start, end, eval = parse_cli_arguments()
+
+    if eval:
+        evaluation.main()
+        return
+
     browser = setup_scraping(headless, email, password)
     orders: List = get_orders(browser, start, end)
 
     utils.save_file('orders.json', json.dumps([order.to_dict() for order in orders]))
 
     close(browser)
+
+
+def parse_cli_arguments() -> Tuple[str, str, bool, int, int, bool]:
+    arg_parser = argparse.ArgumentParser(description='Scrapes your Amazon.de order history')
+    arg_parser.add_argument('--email', type=str, help='the users email address')
+    arg_parser.add_argument('--password', type=str, help='the users password')
+    arg_parser.add_argument('--headless', action='store_true',
+                            help='run the browser in headless mode (browser is invisible)')
+    arg_parser.add_argument('--start', type=int, default=2010, help='the year to start with. If not set 2010 is used.')
+    arg_parser.add_argument('--end', type=int, default=datetime.datetime.now().year,
+                            help='the year to end with. If not set the current year is used.')
+    arg_parser.add_argument('--eval', action='store_true')
+
+    return (getattr(arg_parser.parse_args(), 'email'),
+            getattr(arg_parser.parse_args(), 'password'),
+            getattr(arg_parser.parse_args(), 'headless'),
+            getattr(arg_parser.parse_args(), 'start'),
+            getattr(arg_parser.parse_args(), 'end'),
+            getattr(arg_parser.parse_args(), 'eval'))
 
 
 def setup_scraping(headless, email, password):
@@ -40,8 +65,38 @@ def setup_scraping(headless, email, password):
     return browser
 
 
-def scrape_orders(browser: WebDriver, start_year: int, end_year: int) -> List[Order]:
+def get_orders(browser, start_year: int, end_year: int) -> List[Order]:
+    orders: List[Order] = []
+    last_date: datetime.datetime = datetime.datetime(year=start_year, month=1, day=1)
+    end_date: datetime.datetime = datetime.datetime.now() if end_year == datetime.datetime.now().year else datetime.datetime(
+        year=end_year, month=12, day=31)
+
+    data = utils.read_json_file("orders.json")
+
+    if data:
+        for order_dict in data:
+            orders.append(Order.from_dict(order_dict))
+        orders = sorted(orders, key=lambda order: order.date)
+        last_date = orders[-1].date
+
+        scraped_orders: List[Order] = scrape_orders(browser, last_date, end_date)
+
+        # check for intersection of fetched orders
+        new_orders: List[Order] = list(
+            filter(lambda order: order.order_id in list(map(lambda order: order.order_id, orders)), scraped_orders))
+        orders.extend(new_orders)
+
+    else:
+        orders = scrape_orders(browser, last_date, end_date)
+
+    orders = sorted(orders, key=lambda order: order.date)
+    return orders
+
+
+def scrape_orders(browser: WebDriver, start_date: datetime.datetime, end_date: datetime.datetime) -> List[Order]:
     """ returns list of all orders in between given start year (inclusive) and end year (inclusive) """
+    start_year: int = start_date.year
+    end_year: int = end_date.year
     assert start_year <= end_year, "start year must be before end year"
     assert start_year >= 2010, "Amazon order history works only for years after 2009"
     assert end_year <= datetime.datetime.now().year, "End year can not be in the future"
@@ -66,8 +121,11 @@ def scrape_orders(browser: WebDriver, start_year: int, end_year: int) -> List[Or
         pages_remaining = are_orders_for_year_available(browser)
         while pages_remaining:
 
-            orders.extend(scrape_page_for_orders(browser))
+            orders_on_page: List[Order] = scrape_page_for_orders(browser)
+            orders.extend(orders_on_page)
 
+            if start_date > orders_on_page[-1].date:
+                break
             if is_paging_menu_available(browser):
                 pagination_element = browser.find_element_by_class_name('a-pagination')
             else:
@@ -78,85 +136,11 @@ def scrape_orders(browser: WebDriver, start_year: int, end_year: int) -> List[Or
                 next_page_link = pagination_element.find_element_by_class_name('a-last') \
                     .find_element_by_css_selector('a').get_attribute('href')
                 browser.get(next_page_link)
-        print(f'finished year {datetime.datetime.now().year + 2 - order_filter_index}, ({round((order_filter_index - 1) / (end_index - 2.0) * 100)}%)')
+        year = datetime.datetime.now().year + 2 - order_filter_index
+        progress = round((order_filter_index - 1) / (end_index - 2.0) * 100)
+        print(f'finished year {year}, ({progress}%)')
 
     return orders
-
-
-def get_orders(browser, start, end) -> List[Order]:
-
-    orders: List[Order] = []
-    last_order_year = 2010
-
-    data = utils.read_json_file("orders.json")
-
-    if data:
-        for order_dict in data:
-            orders.append(Order.from_dict(order_dict))
-        # Todo check for actuall date since orders aren't sorted
-        last_order_year = orders[-1].date.year
-
-        scraped_orders: List[Order] = scrape_orders(browser, last_order_year, datetime.datetime.now().year)
-
-        # check for intersection of fetched orders
-        new_orders: List[Order] = list(filter(lambda order: order.order_id in list(map(lambda order: order.order_id, orders)), scraped_orders))
-        orders.extend(new_orders)
-
-    else:
-        orders = scrape_orders(browser, last_order_year, datetime.datetime.now().year)
-
-    return orders
-
-
-def parse_cli_arguments() -> Tuple[str, str, bool, int, int]:
-    arg_parser = argparse.ArgumentParser(description='Scrapes your Amazon.de order history')
-    arg_parser.add_argument('--email', type=str, help='the users email address')
-    arg_parser.add_argument('--password', type=str, help='the users password')
-    arg_parser.add_argument('--headless', action='store_true',
-                            help='run the browser in headless mode (browser is invisible)')
-    arg_parser.add_argument('--start', type=int, default=2010, help='the year to start with. If not set 2010 is used.')
-    arg_parser.add_argument('--end', type=int, default=datetime.datetime.now().year,
-                            help='the year to end with. If not set the current year is used.')
-
-    return (getattr(arg_parser.parse_args(), 'email'),
-            getattr(arg_parser.parse_args(), 'password'),
-            getattr(arg_parser.parse_args(), 'headless'),
-            getattr(arg_parser.parse_args(), 'start'),
-            getattr(arg_parser.parse_args(), 'end'))
-
-
-def navigate_to_orders_page(browser: WebDriver):
-    browser.get('https://www.amazon.de/gp/css/order-history?ref_=nav_orders_first')
-
-
-def complete_sign_in_form(browser: WebDriver, email: str, password: str):
-    try:
-        email_input = browser.find_element_by_id('ap_email')
-        email_input.send_keys(email)
-
-        password_input = browser.find_element_by_id('ap_password')
-        password_input.send_keys(password)
-
-        sign_in_input = browser.find_element_by_id('signInSubmit')
-        sign_in_input.click()
-    except NoSuchElementException:
-        print("Error while trying to sign in, couldn't find all needed form elements")
-
-
-def signed_in_successful(browser: WebDriver) -> bool:
-    """ simple check if we are still on the login page
-        ToDo probably can be replaced by some better method """
-    return browser.current_url != 'https://www.amazon.de/ap/signin'
-
-
-def skip_adding_phone_number(browser: WebDriver):
-    """ find and click the 'skip adding phone number' button if found on the current page """
-    try:
-        skip_adding_phone_link = browser.find_element_by_id('ap-account-fixup-phone-skip-link')
-        skip_adding_phone_link.click()
-        print('skipped adding phone number')
-    except NoSuchElementException:
-        print('no need to skip adding phone number')
 
 
 def scrape_page_for_orders(browser: WebDriver) -> List[Order]:
@@ -191,6 +175,40 @@ def scrape_page_for_orders(browser: WebDriver) -> List[Order]:
         orders.append(Order(order_id, order_price, date, items))
 
     return orders
+
+
+def navigate_to_orders_page(browser: WebDriver):
+    browser.get('https://www.amazon.de/gp/css/order-history?ref_=nav_orders_first')
+
+
+def complete_sign_in_form(browser: WebDriver, email: str, password: str):
+    try:
+        email_input = browser.find_element_by_id('ap_email')
+        email_input.send_keys(email)
+
+        password_input = browser.find_element_by_id('ap_password')
+        password_input.send_keys(password)
+
+        sign_in_input = browser.find_element_by_id('signInSubmit')
+        sign_in_input.click()
+    except NoSuchElementException:
+        print("Error while trying to sign in, couldn't find all needed form elements")
+
+
+def signed_in_successful(browser: WebDriver) -> bool:
+    """ simple check if we are still on the login page
+        ToDo probably can be replaced by some better method """
+    return browser.current_url != 'https://www.amazon.de/ap/signin'
+
+
+def skip_adding_phone_number(browser: WebDriver):
+    """ find and click the 'skip adding phone number' button if found on the current page """
+    try:
+        skip_adding_phone_link = browser.find_element_by_id('ap-account-fixup-phone-skip-link')
+        skip_adding_phone_link.click()
+        print('skipped adding phone number')
+    except NoSuchElementException:
+        print('no need to skip adding phone number')
 
 
 def get_order_info(order_info_element: WebElement) -> Tuple[str, float, datetime.datetime]:
