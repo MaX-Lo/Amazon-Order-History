@@ -17,8 +17,11 @@ def save_file(file_path: str, data: str):
 
 
 def read_json_file(file_path):
-    with open(file_path, 'r') as file:
-        return json.load(file)
+    try:
+        with open(file_path, 'r') as file:
+            return json.load(file)
+    except IOError:
+        return "[]"
 
 
 def str_to_datetime(date_str: str) -> datetime.datetime:
