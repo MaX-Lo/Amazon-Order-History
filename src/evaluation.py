@@ -1,3 +1,4 @@
+import os
 from functools import reduce
 
 import json
@@ -6,12 +7,16 @@ from typing import List, Dict
 import numpy as np
 import matplotlib.pyplot as plt
 
-from .Data import Order
+from src.Data import Order
 
 
 def main():
-    with open("orders.json", 'r') as file:
+    if os.path.exists('../orders.json'):
+        file = open('../orders.json')
         data = json.load(file)
+    else:
+        print("orders.json not found")
+        return
 
     if not data:
         return

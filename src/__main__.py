@@ -79,7 +79,6 @@ def get_orders(browser, start_year: int, end_year: int) -> List[Order]:
         year=end_year, month=12, day=31)
 
     data = utils.read_json_file("orders.json")
-
     if data:
         for order_dict in data:
             orders.append(Order.from_dict(order_dict))
@@ -90,7 +89,7 @@ def get_orders(browser, start_year: int, end_year: int) -> List[Order]:
 
         # check for intersection of fetched orders
         new_orders: List[Order] = list(
-            filter(lambda order: order.order_id in list(map(lambda order: order.order_id, orders)), scraped_orders))
+            filter(lambda order: order.order_id not in list(map(lambda order: order.order_id, orders)), scraped_orders))
         orders.extend(new_orders)
 
     else:

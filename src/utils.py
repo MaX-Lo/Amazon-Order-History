@@ -1,5 +1,6 @@
 import datetime
 import json
+import os
 
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
@@ -17,8 +18,9 @@ def save_file(file_path: str, data: str):
 
 
 def read_json_file(file_path):
-    with open(file_path, 'r') as file:
-        return json.load(file)
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as file:
+            return json.load(file)
 
 
 def str_to_datetime(date_str: str) -> datetime.datetime:
