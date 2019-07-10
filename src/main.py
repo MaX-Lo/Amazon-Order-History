@@ -16,25 +16,30 @@ from src.utils import wait_for_element_by_class_name, wait_for_element_by_id
 
 
 def main():
-    email, password, headless = parse_cli_arguments()
+    email, password, headless, start, end = parse_cli_arguments()
     browser = setup_scraping(headless, email, password)
-    orders: List = get_orders(browser)
+    orders: List = get_orders(browser, start, end)
 
     utils.save_file('orders.json', json.dumps([order.to_dict() for order in orders]))
 
     close(browser)
 
 
-def parse_cli_arguments() -> Tuple[str, str, bool]:
+def parse_cli_arguments() -> Tuple[str, str, bool, int, int]:
     arg_parser = argparse.ArgumentParser(description='Scrapes your Amazon.de order history')
     arg_parser.add_argument('--email', type=str, help='the users email address')
     arg_parser.add_argument('--password', type=str, help='the users password')
     arg_parser.add_argument('--headless', action='store_true',
                             help='run the browser in headless mode (browser is invisible)')
+    arg_parser.add_argument('--start', type=int, default=2010, help='the year to start with. If not set 2010 is used.')
+    arg_parser.add_argument('--end', type=int, default=datetime.datetime.now().year,
+                            help='the year to end with. If not set the current year is used.')
 
-    return getattr(arg_parser.parse_args(), 'email'), \
-        getattr(arg_parser.parse_args(), 'password'), \
-        getattr(arg_parser.parse_args(), 'headless')
+    return (getattr(arg_parser.parse_args(), 'email'),
+            getattr(arg_parser.parse_args(), 'password'),
+            getattr(arg_parser.parse_args(), 'headless'),
+            getattr(arg_parser.parse_args(), 'start'),
+            getattr(arg_parser.parse_args(), 'end'))
 
 
 def setup_scraping(headless, email, password):
@@ -53,7 +58,7 @@ def setup_scraping(headless, email, password):
     return browser
 
 
-def get_orders(browser) -> List[Order]:
+def get_orders(browser, start_year: int, end_year: int) -> List[Order]:
 
     orders: List[Order] = []
     last_date:datetime.datetime = dateutil.parser.parse("2010-01-01T00:00:00")
