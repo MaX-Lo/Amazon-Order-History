@@ -16,7 +16,12 @@ from src.utils import wait_for_element_by_class_name, wait_for_element_by_id
 
 
 def main():
-    email, password, headless, start, end = parse_cli_arguments()
+    email, password, headless, start, end, eval = parse_cli_arguments()
+
+    if eval:
+        evaluation.main()
+        return
+
     browser = setup_scraping(headless, email, password)
     orders: List = get_orders(browser, start, end)
 
@@ -25,7 +30,7 @@ def main():
     close(browser)
 
 
-def parse_cli_arguments() -> Tuple[str, str, bool, int, int]:
+def parse_cli_arguments() -> Tuple[str, str, bool, int, int, bool]:
     arg_parser = argparse.ArgumentParser(description='Scrapes your Amazon.de order history')
     arg_parser.add_argument('--email', type=str, help='the users email address')
     arg_parser.add_argument('--password', type=str, help='the users password')
@@ -34,12 +39,14 @@ def parse_cli_arguments() -> Tuple[str, str, bool, int, int]:
     arg_parser.add_argument('--start', type=int, default=2010, help='the year to start with. If not set 2010 is used.')
     arg_parser.add_argument('--end', type=int, default=datetime.datetime.now().year,
                             help='the year to end with. If not set the current year is used.')
+    arg_parser.add_argument('--eval', action='store_true')
 
     return (getattr(arg_parser.parse_args(), 'email'),
             getattr(arg_parser.parse_args(), 'password'),
             getattr(arg_parser.parse_args(), 'headless'),
             getattr(arg_parser.parse_args(), 'start'),
-            getattr(arg_parser.parse_args(), 'end'))
+            getattr(arg_parser.parse_args(), 'end'),
+            getattr(arg_parser.parse_args(), 'eval'))
 
 
 def setup_scraping(headless, email, password):
@@ -75,7 +82,8 @@ def get_orders(browser, start_year: int, end_year: int) -> List[Order]:
         scraped_orders: List[Order] = scrape_orders(browser, last_date, end_date)
 
         # check for intersection of fetched orders
-        new_orders: List[Order] = list(filter(lambda order: order.order_id in list(map(lambda order: order.order_id, orders)), scraped_orders))
+        new_orders: List[Order] = list(
+            filter(lambda order: order.order_id in list(map(lambda order: order.order_id, orders)), scraped_orders))
         orders.extend(new_orders)
 
     else:
@@ -128,7 +136,9 @@ def scrape_orders(browser: WebDriver, start_date: datetime.datetime, end_date: d
                 next_page_link = pagination_element.find_element_by_class_name('a-last') \
                     .find_element_by_css_selector('a').get_attribute('href')
                 browser.get(next_page_link)
-        print(f'finished year {datetime.datetime.now().year + 2 - order_filter_index}, ({round((order_filter_index - 1) / (end_index - 2.0) * 100)}%)')
+        year = datetime.datetime.now().year + 2 - order_filter_index
+        progress = round((order_filter_index - 1) / (end_index - 2.0) * 100)
+        print(f'finished year {year}, ({progress}%)')
 
     return orders
 
