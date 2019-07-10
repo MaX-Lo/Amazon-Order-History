@@ -16,26 +16,26 @@ from src import utils
 from src.Data import Order, Item
 
 
-def main():
-    email, password, headless, DEBUG = parse_cli_arguments()
-
+def setup_scraping(headless, email, password):
     opts = Options()
     opts.headless = headless
     if opts.headless:
         print("Run in headless mode.")
     browser = Firefox(options=opts)
-
     navigate_to_orders_page(browser)
-
     complete_sign_in_form(browser, email, password)
-
     if not signed_in_successful(browser):
         print("Couldn't sign in. Maybe your credentials are incorrect?")
         close(browser)
-
+        exit()
     skip_adding_phone_number(browser)
+    return browser
 
-    orders = []
+def main():
+    email, password, headless, DEBUG = parse_cli_arguments()
+    browser = setup_scraping(headless, email, password)
+    orders: List = get_orders(browser)
+
     # order filter option 0 and 1 are already contained in option 2 [3months, 6months, currYear, lastYear, ...]
     # current year - first year + first index
     max_index = datetime.datetime.now().year - 2010 + 2
@@ -66,13 +66,33 @@ def main():
                 next_page_link = pagination_element.find_element_by_class_name('a-last') \
                     .find_element_by_css_selector('a').get_attribute('href')
                 browser.get(next_page_link)
-        print(f'finished year {datetime.datetime.now().year + 2 - order_filter_index}, ({round(
-            (order_filter_index - 1.0) / (max_index - 1.0) * 100)}%)')
+        print(f'finished year {datetime.datetime.now().year + 2 - order_filter_index}, ({round((order_filter_index - 1.0) / (max_index - 1.0) * 100)}%)')
 
     utils.save_file('orders.json', json.dumps([order.to_dict() for order in orders]))
 
     close(browser)
 
+
+def get_orders(browser) -> List:
+    orders: List[Order] = []
+    last_order_year = 2010
+    with open("orders.json", 'r') as file:
+        data = json.load(file)
+
+    if data:
+        for order_dict in data:
+            orders.append(Order.from_dict(order_dict))
+        last_order_year = orders[-1].date.year
+
+        scraped_orders: List[Order] = scrape_orders(browser, last_order_year, datetime.datetime.now().year)
+
+        new_orders: List[Order] = list(filter(lambda order: order.order_id in list(map(lambda order: order.order_id, orders)), scraped_orders))
+        orders.extend(new_orders)
+
+    else:
+        orders = scrape_orders(browser, last_order_year, datetime.datetime.now().year)
+
+    return orders
 
 def parse_cli_arguments() -> Tuple[str, str, bool, bool]:
     arg_parser = argparse.ArgumentParser(description='Scrapes your Amazon.de order history')

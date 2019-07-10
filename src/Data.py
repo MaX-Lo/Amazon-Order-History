@@ -28,6 +28,9 @@ class Order:
         self.date = date
         self.items = items
 
+    def is_equal(self, order) -> bool:
+        return order.order_id == self.order_id
+
     def to_dict(self) -> Dict:
         """ returns a serializable representation of this order as dict """
         attr_dict = self.__dict__
