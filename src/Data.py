@@ -1,7 +1,6 @@
 import datetime
 from typing import List, Dict
-
-import dateutil
+import dateutil.parser
 
 from src import utils
 
