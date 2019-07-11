@@ -7,6 +7,7 @@ from typing import List, Dict
 import numpy as np
 import matplotlib.pyplot as plt
 
+from src import utils
 from src.Data import Order
 
 
@@ -30,8 +31,31 @@ def main():
     print(f'most expensive order was: {get_most_expensive_order(orders)}')
     print(f'audible total: {get_audible_total(orders)}')
 
-    plot_expenses_by_year(orders)
-    plot_audible_by_month(orders)
+    #plot_expenses_by_year(orders)
+    #plot_audible_by_month(orders)
+    plot_all(orders)
+
+
+def plot_all(orders: List[Order]):
+    amazon_totals_by_year = utils.sort_dict_by_key(get_total_by_year(orders))
+    years = tuple(amazon_totals_by_year.keys())
+    bar_amount = np.arange(len(years))
+
+    audible_totals_by_year = get_audible_total_by_year(orders)
+    for year in amazon_totals_by_year.keys():
+        if year not in audible_totals_by_year.keys():
+            audible_totals_by_year[year] = 0
+    audible_totals_by_year = utils.sort_dict_by_key(audible_totals_by_year)
+
+    amazon_plot = plt.bar(bar_amount, list(amazon_totals_by_year.values()), align='center', alpha=0.5)
+    audible_plot = plt.bar(bar_amount, list(audible_totals_by_year.values()), align='center', alpha=0.5)
+
+    plt.ylabel('Amount in Euro')
+    plt.xlabel('Year')
+    plt.xticks(bar_amount, years)
+    plt.legend((amazon_plot[0], audible_plot[0]), ('Amazon Purchases', 'Audible Purchases'))
+
+    plt.show()
 
 
 def plot_expenses_by_year(orders: List[Order]):
@@ -42,7 +66,8 @@ def plot_expenses_by_year(orders: List[Order]):
     plt.bar(y_pos, list(totals_by_year.values()), align='center', alpha=0.5)
     plt.xticks(y_pos, objects)
     plt.ylabel('Amount in Euro')
-    plt.title('Year')
+    plt.xlabel('Year')
+    plt.title('Amazon Purchases')
 
     plt.show()
 
@@ -55,7 +80,8 @@ def plot_audible_by_month(orders: List[Order]):
     plt.bar(y_pos, list(totals_by_year.values()), align='center', alpha=0.5)
     plt.xticks(y_pos, objects)
     plt.ylabel('Amount in Euro')
-    plt.title('Year')
+    plt.xlabel('Year')
+    plt.title('Audible Purchases')
 
     plt.show()
 
