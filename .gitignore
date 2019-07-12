@@ -1,6 +1,6 @@
 .idea/
 .pytype/
-src/__pycache__/
+*/__pycache__/
 geckodriver.log
 orders.json
 pw.txt

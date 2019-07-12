@@ -7,8 +7,8 @@ from typing import List, Dict
 import numpy as np
 import matplotlib.pyplot as plt
 
-from src import utils
-from src.Data import Order
+from scraping import utils
+from scraping.Data import Order
 
 
 def main():
@@ -32,7 +32,7 @@ def main():
     print(f'audible total: {get_audible_total(orders)}')
 
     #plot_expenses_by_year(orders)
-    #plot_audible_by_month(orders)
+    plot_audible_by_month(orders)
     plot_all(orders)
 
 
@@ -114,8 +114,15 @@ def get_audible_total(orders: List[Order]):
     return total
 
 
+def order_contains_audible_items(order: Order) -> bool:
+    for item in order.items:
+        if "Audible" in item.title:
+            return True
+    return False
+
+
 def get_audible_total_by_year(orders: List[Order]) -> Dict[int, float]:
-    audible_orders = filter(lambda order: order.order_id[:3] == 'D01', orders)
+    audible_orders = [order for order in orders if order_contains_audible_items(order)]
     orders_by_year = {}
     for order in audible_orders:
         if order.date.year not in orders_by_year.keys():
