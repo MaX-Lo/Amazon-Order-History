@@ -8,9 +8,17 @@ Currently only works for the german version of Amazon (amazon.de). For amazon.co
 
 When using a computer where you've not logged in before Amazon might requires a confirmation code from an email 
 it has send to you. Therefore it can be necessary to login with your favorite browser before using that script. 
-After logging in the first time there shouldn't be anymore email confirmations necessary.
+After logging in the first time there shouldn't be anymore email confirmations necessary. The same applies if you
+have two-factor authentication activated.
+
+to install requirements:
+
+`pip install -r requirements.txt`
+
+
 
 Usage:
-`python -m src --email abc@xy.z --password 123 [--headless]`
 
-headless - is optional, if specified it starts an invisible crawler  
+`python -m scraping --email abc@xy.z --password 123`
+
+There are some optional parameters. `python -m scraping --help` shows a description for each of them.
