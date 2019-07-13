@@ -4,7 +4,6 @@ import os
 from typing import List, Tuple
 import argparse
 
-import dateutil
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver import Firefox
 from selenium.webdriver.firefox.options import Options
@@ -19,14 +18,14 @@ from .utils import wait_for_element_by_class_name, wait_for_element_by_id
 def main():
     email, password, headless, start, end, eval = parse_cli_arguments()
 
-    if eval:
-        evaluation.main()
-        return
-
     browser = setup_scraping(headless, email, password)
     orders: List = get_orders(browser, start, end)
 
     utils.save_file('orders.json', json.dumps([order.to_dict() for order in orders]))
+
+    if eval:
+        evaluation.main()
+        return
 
     close(browser)
 
@@ -40,20 +39,18 @@ def parse_cli_arguments() -> Tuple[str, str, bool, int, int, bool]:
     arg_parser.add_argument('--start', type=int, default=2010, help='the year to start with. If not set 2010 is used.')
     arg_parser.add_argument('--end', type=int, default=datetime.datetime.now().year,
                             help='the year to end with. If not set the current year is used.')
-    arg_parser.add_argument('--eval', action='store_true')
+    arg_parser.add_argument('--eval', action='store_true',
+                            help='Perform evaluation right after fetching the order history.')
 
-    password = getattr(arg_parser.parse_args(), 'password')
-    if len(getattr(arg_parser.parse_args(), 'password')) == 0:
+    args = arg_parser.parse_args()
+
+    password = args.password
+    if len(password) == 0:
         if os.path.exists('pw.txt'):
             file = open('pw.txt')
             password = file.read()
 
-    return (getattr(arg_parser.parse_args(), 'email'),
-            password,
-            getattr(arg_parser.parse_args(), 'headless'),
-            getattr(arg_parser.parse_args(), 'start'),
-            getattr(arg_parser.parse_args(), 'end'),
-            getattr(arg_parser.parse_args(), 'eval'))
+    return args.email, password, args.headless, args.start, args.end, args.eval
 
 
 def setup_scraping(headless, email, password):
@@ -72,7 +69,13 @@ def setup_scraping(headless, email, password):
     return browser
 
 
-def get_orders(browser, start_year: int, end_year: int) -> List[Order]:
+def get_orders(browser: WebDriver, start_year: int, end_year: int) -> List[Order]:
+    """
+        get a list of all orders in the given range (start and end year inclusive)
+        to save network capacities it is checked if some orders got already fetched earlier in 'orders.json'
+
+        :param browser is a WebDriver pointing to the orders page and having the user logged in already
+        """
     orders: List[Order] = []
     last_date: datetime.datetime = datetime.datetime(year=start_year, month=1, day=1)
     end_date: datetime.datetime = datetime.datetime.now() if end_year == datetime.datetime.now().year else datetime.datetime(
@@ -159,28 +162,59 @@ def scrape_page_for_orders(browser: WebDriver) -> List[Order]:
         order_id, order_price, date = get_order_info(order_info_element)
 
         items = []
-        for items_by_seller in order_element.find_elements_by_class_name('shipment'):
+        # looking in an order there is a 'a-box' for order_info and and 'a-box' for each seller containing detailed
+        # items info
+        for items_by_seller in order_element.find_elements_by_class_name('a-box')[1:]:
             for item_element in items_by_seller.find_elements_by_class_name('a-fixed-left-grid'):
                 try:
                     item_title_element = item_element.find_element_by_class_name('a-col-right') \
                         .find_element_by_class_name('a-row')
                     link = item_title_element.find_element_by_class_name('a-link-normal').get_attribute('href')
                     title = item_title_element.text
+
+                    if "Hörbuch" in item_element.get_attribute('outerHTML'):
+                        title = "Audible - " + title
                 except NoSuchElementException:
                     link = 'not available'
                     title = 'not available'
+
 
                 try:
                     item_price_str = item_element.find_element_by_class_name('a-color-price').text
                     item_price = price_str_to_float(item_price_str)
                 except (NoSuchElementException, ValueError) as e:
-                    print(f'Could not parse price for order {link}')
+                    # print(f'Could not parse price for order {link}')
                     item_price = 0.0
 
                 items.append(Item(item_price, link, title))
         orders.append(Order(order_id, order_price, date, items))
 
     return orders
+
+
+def get_order_info(order_info_element: WebElement) -> Tuple[str, float, datetime.datetime]:
+    order_info_list: List[str] = [info_field.text for info_field in
+                                  order_info_element.find_elements_by_class_name('value')]
+
+    # value tags have only generic class names so a constant order in form of:
+    # [date, price, recipient_address, order_id] or if no recipient_address is available
+    # [date, recipient_address, order_id]
+    # is assumed
+    if len(order_info_list) < 4:
+        order_id = order_info_list[2]
+    else:
+        order_id = order_info_list[3]
+
+    # price is usually formatted as 'EUR x,xx' but special cases as 'Audible Guthaben' are possible as well
+    order_price = order_info_list[1]
+    if order_price.find('EUR') != -1:
+        order_price = price_str_to_float(order_price)
+    else:
+        order_price = 0
+
+    date_str = order_info_list[0]
+    date = utils.str_to_datetime(date_str)
+    return order_id, order_price, date
 
 
 def navigate_to_orders_page(browser: WebDriver):
@@ -215,30 +249,6 @@ def skip_adding_phone_number(browser: WebDriver):
         print('skipped adding phone number')
     except NoSuchElementException:
         print('no need to skip adding phone number')
-
-
-def get_order_info(order_info_element: WebElement) -> Tuple[str, float, datetime.datetime]:
-    order_info_list: List[str] = [info_field.text for info_field in
-                                  order_info_element.find_elements_by_class_name('value')]
-
-    # value tags have only generic class names so a constant order is assumed...
-    # [date, price, recipient_address, order_id] or if no recipient_address is available
-    # [date, recipient_address, order_id]
-    if len(order_info_list) < 4:
-        order_id = order_info_list[2]
-    else:
-        order_id = order_info_list[3]
-
-    # price is usually formatted as 'EUR x,xx' but special cases as 'Audible Guthaben' are possible as well
-    order_price = order_info_list[1]
-    if order_price.find('EUR') != -1:
-        order_price = price_str_to_float(order_price)
-    else:
-        order_price = 0
-
-    date_str = order_info_list[0]
-    date = utils.str_to_datetime(date_str)
-    return order_id, order_price, date
 
 
 def is_next_page_available(browser: WebDriver) -> bool:

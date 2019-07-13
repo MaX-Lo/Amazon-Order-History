@@ -1,6 +1,7 @@
 import datetime
 import json
 import os
+from collections import OrderedDict
 
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
@@ -60,3 +61,15 @@ def wait_for_element_by_id(browser: WebDriver, order_id: object, timeout: object
     except TimeoutException:
         print(f'Loading took too much time! (>{timeout}sec)')
         return False
+
+
+def sort_dict_by_key(dic: dict) -> OrderedDict:
+    return_dict = OrderedDict()
+
+    keys = list(dic.keys())
+    keys.sort()
+
+    for key in keys:
+        return_dict[key] = dic[key]
+
+    return return_dict
