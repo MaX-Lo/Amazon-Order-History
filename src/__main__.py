@@ -162,13 +162,28 @@ def scrape_page_for_orders(browser: WebDriver) -> List[Order]:
         for items_by_seller in order_element.find_elements_by_class_name('shipment'):
             for item_element in items_by_seller.find_elements_by_class_name('a-fixed-left-grid'):
                 try:
-                    item_title_element = item_element.find_element_by_class_name('a-col-right') \
-                        .find_element_by_class_name('a-row')
+                    item_elements = item_element.find_element_by_class_name('a-col-right') \
+                        .find_elements_by_class_name('a-row')
+                    item_title_element = item_elements[0]
                     link = item_title_element.find_element_by_class_name('a-link-normal').get_attribute('href')
                     title = item_title_element.text
+
+                    item_seller_element = item_elements[1].find_element_by_class_name('a-color-secondary')
+                    seller = item_seller_element.text.split(': ')[1]
+                    print(f'DEBUG seller: {seller}')
+
                 except NoSuchElementException:
                     link = 'not available'
                     title = 'not available'
+                    seller = 'not available'
+                    print(f'DEBUG seller failed: {date}')
+
+                    item_elements = item_element.find_element_by_class_name('a-col-right') \
+
+                    print("------------------------")
+                    print(item_elements[0].text)
+                    print("------------------------")
+                    break
 
                 try:
                     item_price_str = item_element.find_element_by_class_name('a-color-price').text
@@ -177,7 +192,7 @@ def scrape_page_for_orders(browser: WebDriver) -> List[Order]:
                     print(f'Could not parse price for order {link}')
                     item_price = 0.0
 
-                items.append(Item(item_price, link, title))
+                items.append(Item(item_price, link, title, seller))
         orders.append(Order(order_id, order_price, date, items))
 
     return orders

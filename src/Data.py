@@ -6,10 +6,11 @@ from . import utils
 
 
 class Item:
-    def __init__(self, price, link, title):
+    def __init__(self, price, link, title, seller: str):
         self.price = price
         self.link = link
         self.title = title
+        self.seller = seller
 
     def to_dict(self) -> Dict:
         return self.__dict__
