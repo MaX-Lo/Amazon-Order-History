@@ -42,18 +42,15 @@ def parse_cli_arguments() -> Tuple[str, str, bool, int, int, bool]:
     arg_parser.add_argument('--eval', action='store_true',
                             help='Perform evaluation right after fetching the order history.')
 
-    password = getattr(arg_parser.parse_args(), 'password')
-    if len(getattr(arg_parser.parse_args(), 'password')) == 0:
+    args = arg_parser.parse_args()
+
+    password = args.password
+    if len(password) == 0:
         if os.path.exists('pw.txt'):
             file = open('pw.txt')
             password = file.read()
 
-    return (getattr(arg_parser.parse_args(), 'email'),
-            password,
-            getattr(arg_parser.parse_args(), 'headless'),
-            getattr(arg_parser.parse_args(), 'start'),
-            getattr(arg_parser.parse_args(), 'end'),
-            getattr(arg_parser.parse_args(), 'eval'))
+    return args.email, password, args.headless, args.start, args.end, args.eval
 
 
 def setup_scraping(headless, email, password):
@@ -72,7 +69,13 @@ def setup_scraping(headless, email, password):
     return browser
 
 
-def get_orders(browser, start_year: int, end_year: int) -> List[Order]:
+def get_orders(browser: WebDriver, start_year: int, end_year: int) -> List[Order]:
+    """
+        get a list of all orders in the given range (start and end year inclusive)
+        to save network capacities it is checked if some orders got already fetched earlier in 'orders.json'
+
+        :param browser is a WebDriver pointing to the orders page and having the user logged in already
+        """
     orders: List[Order] = []
     last_date: datetime.datetime = datetime.datetime(year=start_year, month=1, day=1)
     end_date: datetime.datetime = datetime.datetime.now() if end_year == datetime.datetime.now().year else datetime.datetime(
@@ -159,8 +162,13 @@ def scrape_page_for_orders(browser: WebDriver) -> List[Order]:
         order_id, order_price, date = get_order_info(order_info_element)
 
         items = []
-        for items_by_seller in order_element.find_elements_by_class_name('shipment'):
+        # looking in an order there is a 'a-box' for order_info and and 'a-box' for each seller containing detailed
+        # items info
+        for items_by_seller in order_element.find_elements_by_class_name('a-box')[1:]:
             for item_element in items_by_seller.find_elements_by_class_name('a-fixed-left-grid'):
+                seller = item_element.text.split('durch: ')[1]
+                seller = seller.split('\n')[0]
+                
                 try:
                     item_elements = item_element.find_element_by_class_name('a-col-right') \
                         .find_elements_by_class_name('a-row')
@@ -168,22 +176,10 @@ def scrape_page_for_orders(browser: WebDriver) -> List[Order]:
                     link = item_title_element.find_element_by_class_name('a-link-normal').get_attribute('href')
                     title = item_title_element.text
 
-                    item_seller_element = item_elements[1].find_element_by_class_name('a-color-secondary')
-                    seller = item_seller_element.text.split(': ')[1]
-                    print(f'DEBUG seller: {seller}')
-
                 except NoSuchElementException:
                     link = 'not available'
                     title = 'not available'
-                    seller = 'not available'
-                    print(f'DEBUG seller failed: {date}')
-
-                    item_elements = item_element.find_element_by_class_name('a-col-right') \
-
-                    print("------------------------")
-                    print(item_elements[0].text)
-                    print("------------------------")
-                    break
+                    print(f'Order parse failed: {date}')
 
                 try:
                     item_price_str = item_element.find_element_by_class_name('a-color-price').text
