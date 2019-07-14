@@ -166,29 +166,9 @@ def scrape_page_for_orders(browser: WebDriver) -> List[Order]:
         # items info
         for items_by_seller in order_element.find_elements_by_class_name('a-box')[1:]:
             for item_element in items_by_seller.find_elements_by_class_name('a-fixed-left-grid'):
-                seller = get_seller(item_element)
-
-                try:
-                    item_elements = item_element.find_element_by_class_name('a-col-right') \
-                        .find_elements_by_class_name('a-row')
-                    item_title_element = item_elements[0]
-                    link = item_title_element.find_element_by_class_name('a-link-normal').get_attribute('href')
-                    title = item_title_element.text
-
-                except NoSuchElementException:
-                    link = 'not available'
-                    title = 'not available'
-                    print(f'Order parse failed: {date}')
-
-                try:
-                    item_price_str = item_element.find_element_by_class_name('a-color-price').text
-                    item_price = price_str_to_float(item_price_str)
-                except (NoSuchElementException, ValueError) as e:
-                    if is_digital_order(order_id):
-                        item_price = order_price
-                    else:
-                        print(f'Could not parse price for order {link}')
-                        item_price = 0
+                seller = get_item_seller(item_element)
+                title, link = get_item_title(item_element)
+                item_price = order_price if is_digital_order(order_id) else get_item_price(item_element)
 
                 items.append(Item(item_price, link, title, seller))
         orders.append(Order(order_id, order_price, date, items))
@@ -275,16 +255,47 @@ def is_paging_menu_available(browser: WebDriver):
 def are_orders_for_year_available(browser: WebDriver):
     return browser.page_source.find('keine Bestellungen aufgegeben') == -1
 
+
 def is_digital_order(order_id):
     return order_id[:3] == 'D01'
+
 
 def price_str_to_float(price_str) -> float:
     return float((price_str[4:]).replace(',', '.'))
 
-def get_seller(item_element) -> str:
-    seller = item_element.text.split('durch: ')[1]
-    seller = seller.split('\n')[0]
-    return seller
+
+def get_item_seller(item_element) -> str:
+    try:
+        seller = item_element.text.split('durch: ')[1]
+        seller = seller.split('\n')[0]
+        return seller
+    except IndexError:
+        return 'not available'
+
+
+def get_item_title(item_element) -> (str, str):
+    item_elements = item_element.find_element_by_class_name('a-col-right') \
+        .find_elements_by_class_name('a-row')
+    item_title_element = item_elements[0]
+    title = item_title_element.text
+    try:
+        link = item_title_element.find_element_by_class_name('a-link-normal').get_attribute('href')
+    except NoSuchElementException:
+        link = 'not available'
+
+    return title, link
+
+
+def get_item_price(item_element) -> float:
+    item_price = 0
+    try:
+        item_price_str = item_element.find_element_by_class_name('a-color-price').text
+        item_price = price_str_to_float(item_price_str)
+    except (NoSuchElementException, ValueError) as e:
+        print(f'Could not parse price for order:\n{item_element.text}')
+        print('--------------------------------------------------------')
+    return item_price
+
 
 def close(browser):
     browser.close()
