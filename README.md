@@ -19,12 +19,26 @@ Install requirements
 Make sure [Geckodriver](https://github.com/mozilla/geckodriver/releases) is in your PATH
 # Usage
 
-When using a computer where you've not logged in before Amazon might requires a confirmation code from an email 
-it has send to you. Therefore it can be necessary to login with your favorite browser before using that script. 
-After logging in the first time there shouldn't be anymore email confirmations necessary.
+When using a device where you've not logged in before Amazon might require a confirmation code from an email 
+it has send to you. Therefore it can be necessary to log into Amazon with your browser before using that script on a new device. 
+After logging in the first time there shouldn't be anymore email confirmations necessary. The same applies if you
+have two-factor authentication activated.
+
+to install requirements:
+
+`pip install -r requirements.txt`
+
+
 
 Usage:
+<<<<<<< HEAD
 `python main --email abc@xy.z --password 123 [--headless]`
 
 headless - is optional, if specified it starts an invisible crawler  
 
+=======
+
+`python -m scraping --email abc@xy.z --password 123`
+
+There are some optional parameters available, `python -m scraping --help` shows a description for each of them.
+>>>>>>> be1af9c090b7101acb428758954dd96f982647c9

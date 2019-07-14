@@ -1,0 +1,107 @@
+# We maintain our own collections.pytd, rather than using collections.pyi from
+# typeshed, because this file makes use of mutable type parameters.
+from typing import Any, Callable, DefaultDict, Dict, List, Mapping, Optional, Text, Tuple
+
+K = TypeVar("K")
+V = TypeVar("V")
+K2 = TypeVar("K2")
+V2 = TypeVar("V2")
+DV = TypeVar("DV")
+T = TypeVar("T")
+
+__all__ = ...  # type: list[?]
+_abcoll = ...  # type: ?
+_chain = ...  # type: type
+_class_template = ...  # type: str
+_eq = ...  # type: ?
+_field_template = ...  # type: str
+_get_ident = ...  # type: ?
+_heapq = ...  # type: ?
+_imap = ...  # type: type
+_iskeyword = ...  # type: ?
+_itemgetter = ...  # type: Callable
+_repeat = ...  # type: type
+_repr_template = ...  # type: str
+_starmap = ...  # type: type
+_sys = ...  # type: module
+dumps = ...  # type: Callable
+loads = ...  # type: Callable
+
+class deque(typing.Deque[T]): ...
+
+Callable = typing.Callable
+Container = typing.Container
+Counter = typing.Counter
+Hashable = typing.Hashable
+ItemsView = typing.ItemsView
+Iterable = typing.Iterable
+Iterator = typing.Iterator
+KeysView = typing.KeysView
+Mapping = typing.Mapping
+MappingView = typing.MappingView
+MutableMapping = typing.MutableMapping
+MutableSequence = typing.MutableSequence
+MutableSet = typing.MutableSet
+Sequence = typing.Sequence
+Set = typing.Set
+Sized = typing.Sized
+ValuesView = typing.ValuesView
+
+if sys.version_info[0] >= 3:
+  AsyncIterable = typing.AsyncIterable
+  AsyncIterator = typing.AsyncIterator
+  Awaitable = typing.Awaitable
+  ByteString = typing.ByteString
+  ChainMap = typing.ChainMap
+  Coroutine = typing.Coroutine
+  Collection = typing.Collection
+  Generator = typing.Generator
+  Reversible = typing.Reversible
+
+if sys.version_info >= (3, 6):
+  AsyncGenerator = typing.AsyncGenerator
+
+if sys.version_info >= (3, 6):
+  def namedtuple(typename: Text,
+    field_names: Text or Iterable[Text] or Iterable[nothing],
+    *,
+    verbose: bool = ..., rename: bool = ...) -> type
+else:
+  def namedtuple(typename: Text,
+    field_names: Text or Iterable[Text] or Iterable[nothing],
+    verbose: bool = ..., rename: bool = ...) -> type
+
+class OrderedDict(Dict[K, V]):
+  def popitem(self, last: bool = ...) -> Tuple[K, V]
+
+class defaultdict(DefaultDict[K, V]):
+  default_factory = ...  # type: Optional[Callable[[], V]]
+  def __init__(self):
+    self = defaultdict[nothing, nothing]
+  def __init__(self, default_factory: None):
+    self = defaultdict[nothing, nothing]
+  def __init__(self, default_factory: Callable[[], DV]) -> None:
+    self = defaultdict[nothing, DV]
+  def __init__(self, **kwargs: V2):
+    self = defaultdict[str, V2]
+  def __init__(self, default_factory: None, **kwargs: V2) -> None:
+    self = defaultdict[str, V2]
+  def __init__(self, default_factory: None, iter: Iterable[Tuple[K2, V2]]) -> None:
+    self = defaultdict[K2, V2]
+  def __init__(self, default_factory: None, map: Mapping[K2, V2]) -> None:
+    self = defaultdict[K2, V2]
+  def __init__(self, default_factory: Callable[[], DV], **kwargs: V2) -> None:
+    self = defaultdict[str, DV or V2]
+  def __init__(self, default_factory: Callable[[], DV], map: Mapping[K2, V2]) -> None:
+    self = defaultdict[K2, DV or V2]
+  def __init__(self, default_factory: Callable[[], DV], iter: Iterable[Tuple[K2, V2]]) -> None:
+    self = defaultdict[K2, DV or V2]
+  def __missing__(self, key: K) -> V
+  def __getitem__(self, key: K2) -> Any:
+    self = defaultdict[K or K2, Any]
+
+if sys.version_info[0] >= 3:
+    # TODO(kramm): Implement these
+    UserDict = ...  # type: ?
+    UserList = ...  # type: ?
+    UserString = ...  # type: ?
