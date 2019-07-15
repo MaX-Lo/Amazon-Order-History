@@ -1,7 +1,5 @@
-import os
 from functools import reduce
 
-import json
 from typing import List, Dict
 
 import numpy as np
@@ -9,23 +7,11 @@ import matplotlib.pyplot as plt
 
 from scraping import utils
 from scraping.Data import Order
+from scraping import file_handler as fh
 
 
 def main():
-    print(os.path.abspath('../orders.jons'))
-    if os.path.exists('../orders.json'):
-        with open('../orders.json') as file:
-            data = json.load(file)
-    else:
-        print("orders.json not found")
-        return
-
-    if not data:
-        return
-
-    orders = []
-    for order_dict in data:
-        orders.append(Order.from_dict(order_dict))
+    orders = fh.load_orders()
 
     print(f'counted {get_order_count(orders)} orders with a total price of {get_total(orders)} Euro')
     print(f'most expensive order was: {get_most_expensive_order(orders)}')
@@ -92,6 +78,7 @@ def get_total_by_year(orders: List[Order]) -> Dict[int, float]:
         if order.date.year not in totals_by_year:
             totals_by_year[order.date.year] = 0
         totals_by_year[order.date.year] += order.price
+    totals_by_year = {year: round(total, 2) for year, total in totals_by_year.items()}
     return totals_by_year
 
 
@@ -123,12 +110,14 @@ def order_contains_audible_items(order: Order) -> bool:
 
 def get_audible_total_by_year(orders: List[Order]) -> Dict[int, float]:
     audible_orders = [order for order in orders if order_contains_audible_items(order)]
-    orders_by_year = {}
+    total_by_year = {}
     for order in audible_orders:
-        if order.date.year not in orders_by_year.keys():
-            orders_by_year[order.date.year] = 0
-        orders_by_year[order.date.year] += order.price
-    return orders_by_year
+        if order.date.year not in total_by_year.keys():
+            total_by_year[order.date.year] = 0
+        total_by_year[order.date.year] += order.price
+    total_by_year = {year: round(total, 2) for year, total in total_by_year.items()}
+
+    return total_by_year
 
 
 if __name__ == '__main__':

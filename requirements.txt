@@ -3,3 +3,6 @@ pytype
 python-dateutil
 numpy
 matplotlib
+
+dash
+dash-daq
