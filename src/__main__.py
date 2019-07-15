@@ -1,11 +1,13 @@
 import datetime
 import json
 import os
+from time import sleep
 from typing import List, Tuple
 import argparse
 
 from selenium.common.exceptions import NoSuchElementException
-from selenium.webdriver import Firefox
+from selenium.webdriver import Firefox, ActionChains, FirefoxProfile
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
@@ -54,11 +56,15 @@ def parse_cli_arguments() -> Tuple[str, str, bool, int, int, bool]:
 
 
 def setup_scraping(headless, email, password):
+    fp = FirefoxProfile()
+    fp.set_preference("browser.tabs.remote.autostart", False)
+    fp.set_preference("browser.tabs.remote.autostart.1", False)
+    fp.set_preference("browser.tabs.remote.autostart.2", False)
     opts = Options()
     opts.headless = headless
     if opts.headless:
         print("Run in headless mode.")
-    browser = Firefox(options=opts)
+    browser = Firefox(options=opts, firefox_profile=fp)
     navigate_to_orders_page(browser)
     complete_sign_in_form(browser, email, password)
     if not signed_in_successful(browser):
@@ -168,7 +174,7 @@ def scrape_page_for_orders(browser: WebDriver) -> List[Order]:
             for item_element in items_by_seller.find_elements_by_class_name('a-fixed-left-grid'):
                 seller = get_item_seller(item_element)
                 title, link = get_item_title(item_element)
-                item_price = order_price if is_digital_order(order_id) else get_item_price(item_element)
+                item_price = order_price if is_digital_order(order_id) else get_item_price(item_element, order_element, browser)
 
                 items.append(Item(item_price, link, title, seller))
         orders.append(Order(order_id, order_price, date, items))
@@ -286,14 +292,30 @@ def get_item_title(item_element) -> (str, str):
     return title, link
 
 
-def get_item_price(item_element) -> float:
+def get_item_price(item_element, order_element, browser: WebDriver) -> float:
     item_price = 0
     try:
         item_price_str = item_element.find_element_by_class_name('a-color-price').text
         item_price = price_str_to_float(item_price_str)
     except (NoSuchElementException, ValueError) as e:
-        print(f'Could not parse price for order:\n{item_element.text}')
-        print('--------------------------------------------------------')
+        try:
+            order_details_link = order_element.find_element_by_class_name('a-link-normal').get_attribute('href')
+
+            browser.execute_script(f'''window.open("{order_details_link}","_blank");''')
+            browser.switch_to.window(browser.window_handles[1])
+            wait_for_element_by_id(browser, 'od-subtotals')
+
+            order_price_details = browser.find_element_by_id('od-subtotals')
+            order_price_details = order_price_details.text.split("Summe:")[1]
+            order_price_details = order_price_details.split(" ")[1]
+            item_price = order_price_details.split("\n")[0]
+
+            browser.close()
+            browser.switch_to.window(browser.window_handles[0])
+
+        except (NoSuchElementException, ValueError) as e:
+            browser.switch_to.window(browser.window_handles[0])
+            print(f'Could not parse price for order:\n{item_element.text}')
     return item_price
 
 
