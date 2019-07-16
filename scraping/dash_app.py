@@ -40,6 +40,12 @@ def add_total_plots(app: dash.Dash, orders: List[Order]):
         name='amazon total'
     )]
 
+    data_instant_video = [go.Bar(
+        x=list(total_by_year_instant_video.keys()),
+        y=list(total_by_year_instant_video.values()),
+        name='amazon total'
+    )]
+
     app.layout = html.Div(children=[
         html.H1(children='Amazon Order History - Evaluation'),
 
@@ -58,14 +64,25 @@ def add_total_plots(app: dash.Dash, orders: List[Order]):
         ),
 
         dcc.Graph(
-            id='my-graph',
+            id='audible-graph',
             figure={
                 'data': data_audible,
                 'layout': {
                     'title': 'Audible totals by year'
                 }
             }
+        ),
+
+        dcc.Graph(
+            id='instant-video-graph',
+            figure={
+                'data': data_instant_video,
+                'layout': {
+                    'title': 'Instant Video totals by year'
+                }
+            }
         )
+
     ])
 
 
