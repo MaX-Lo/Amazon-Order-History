@@ -13,13 +13,14 @@ from scraping import file_handler as fh
 def main():
     orders = fh.load_orders()
 
-    print(f'counted {get_order_count(orders)} orders with a total price of {get_total(orders)} Euro')
-    print(f'most expensive order was: {get_most_expensive_order(orders)}')
-    print(f'audible total: {get_audible_total(orders)}')
 
     #plot_expenses_by_year(orders)
-    plot_audible_by_month(orders)
+    #plot_audible_by_month(orders)
     plot_all(orders)
+
+    print(f'counted {get_order_count(orders)} orders with a total price of {get_total(orders)} Euro')
+    print(f'most expensive order was: {list(map(lambda order: order.to_dict(), get_most_expensive_order(orders)))}')
+    print(f'audible total: {get_audible_total(orders)}')
 
 
 def plot_all(orders: List[Order]):

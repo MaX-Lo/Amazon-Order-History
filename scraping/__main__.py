@@ -10,6 +10,7 @@ from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 
+from scraping import file_handler
 from . import utils, evaluation
 from .Data import Order, Item
 from .utils import wait_for_element_by_class_name, wait_for_element_by_id
@@ -21,7 +22,7 @@ def main():
     browser = setup_scraping(headless, email, password)
     orders: List = get_orders(browser, start, end)
 
-    utils.save_file('orders.json', json.dumps([order.to_dict() for order in orders]))
+    file_handler.save_file('orders.json', json.dumps([order.to_dict() for order in orders]))
 
     if eval:
         evaluation.main()
@@ -46,9 +47,10 @@ def parse_cli_arguments() -> Tuple[str, str, bool, int, int, bool]:
 
     password = args.password
     if len(password) == 0:
-        if os.path.exists('pw.txt'):
-            file = open('pw.txt')
-            password = file.read()
+        password = file_handler.load_password()
+        if len(password) == 0:
+            print("Password not given nor pw.txt found")
+            exit(1)
 
     return args.email, password, args.headless, args.start, args.end, args.eval
 
@@ -85,7 +87,7 @@ def get_orders(browser: WebDriver, start_year: int, end_year: int) -> List[Order
     end_date: datetime.datetime = datetime.datetime.now() if end_year == datetime.datetime.now().year else datetime.datetime(
         year=end_year, month=12, day=31)
 
-    data = utils.read_json_file("orders.json")
+    data = file_handler.read_json_file("orders.json")
     if data:
         for order_dict in data:
             orders.append(Order.from_dict(order_dict))
