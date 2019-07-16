@@ -26,6 +26,7 @@ def main():
 def add_total_plots(app: dash.Dash, orders: List[Order]):
     total_by_year_amazon = eval.get_total_by_year(orders)
     total_by_year_audible = eval.get_audible_total_by_year(orders)
+    total_by_year_instant_video = eval.get_instant_video_per_year(orders)
 
     data_amazon = [go.Bar(
         x=list(total_by_year_amazon.keys()),
@@ -66,6 +67,17 @@ def add_total_plots(app: dash.Dash, orders: List[Order]):
             }
         )
     ])
+
+
+def add_instant_video_total_plot(app: dash.Dash, orders: List[Order]):
+    total_by_year = eval.get_instant_video_per_year(orders)
+
+    data = [go.Bar(
+        x=list(total_by_year.keys()),
+        y=list(total_by_year.values()),
+        name='amazon total'
+    )]
+    add_total_by_year_plot(app, data)
 
 
 def add_audible_total_plot(app: dash.Dash, orders: List[Order]):

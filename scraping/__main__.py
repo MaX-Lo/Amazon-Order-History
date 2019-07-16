@@ -5,8 +5,7 @@ from typing import List, Tuple
 import argparse
 
 from selenium.common.exceptions import NoSuchElementException
-from selenium.webdriver import Firefox, ActionChains, FirefoxProfile
-from selenium.webdriver.common.keys import Keys
+from selenium.webdriver import Firefox, FirefoxProfile
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
