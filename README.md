@@ -15,11 +15,25 @@ to install requirements:
 
 `pip install -r requirements.txt`
 
-Usage:
+# Usage:
 
-`python -m scraping --email abc@xy.z --password 123`
+## Scraping:
+
+`python -m scraping scrape --email abc@xy.z --password 123`
 
 If you don't want your password appearing in the bash history or on the terminal output, you can create a `pw.txt` in 
 the project root directory (`Amazon-Order-History`), which contains your password and don't use the password parameter.
+
+## Evaluation:
+
+As plot:
+
+`python -m scraping eval`
+
+As Dash-App:
+
+`python -m scraping dash`
+
+## Help
 
 There are some optional parameters available, `python -m scraping --help` shows a description for each of them.
