@@ -6,9 +6,9 @@ import dash_core_components as dcc
 import dash_html_components as html
 import plotly.graph_objs as go
 
-from scraping import evaluation as eval
-from scraping import file_handler as fh
-from scraping.Data import Order
+from . import evaluation as eval
+from . import file_handler as fh
+from .Data import Order
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 

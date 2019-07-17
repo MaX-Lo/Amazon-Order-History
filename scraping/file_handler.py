@@ -2,7 +2,7 @@ import json
 import os
 from typing import List
 
-from scraping.Data import Order
+from .Data import Order
 
 
 def load_orders(file_name: str = 'orders.json') -> List[Order]:

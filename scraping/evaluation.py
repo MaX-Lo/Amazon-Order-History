@@ -5,9 +5,9 @@ from typing import List, Dict
 import numpy as np
 import matplotlib.pyplot as plt
 
-from scraping import utils
-from scraping.Data import Order
-from scraping import file_handler as fh
+from . import utils
+from .Data import Order
+from . import file_handler as fh
 
 
 def main():
