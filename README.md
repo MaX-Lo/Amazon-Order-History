@@ -15,6 +15,9 @@ to install requirements:
 
 `pip install -r requirements.txt`
 
+Make sure your [Geckodriver](https://github.com/mozilla/geckodriver/releases/tag/v0.24.0 "Geckodriver Releases")
+ is installed and on your PATH variable.
+
 # Usage:
 
 ## Scraping:
