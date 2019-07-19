@@ -200,8 +200,7 @@ def complete_sign_in_form(browser: WebDriver, email: str, password: str):
 
 
 def signed_in_successful(browser: WebDriver) -> bool:
-    """ simple check if we are still on the login page
-        ToDo probably can be replaced by some better method """
+    """ simple check if we are still on the login page """
     return browser.current_url != 'https://www.amazon.de/ap/signin'
 
 

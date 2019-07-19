@@ -10,18 +10,16 @@ from . import evaluation as eval
 from . import file_handler as fh
 from .Data import Order
 
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-
 
 def main():
-    app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+    app = dash.Dash(__name__)
 
     orders = fh.load_orders()
 
     app.layout = html.Div(className="container", children=[
         head(),
         general_information(orders),
-        plots(orders)
+        gen_plots(orders)
     ], style={'fontSize': 18})
 
     app.run_server(debug=True)
@@ -35,9 +33,8 @@ def head():
 
 
 def general_information(orders: List[Order]) -> html.Div:
-    # ToDo
     return html.Div(children=[
-        html.H3(children="General Statistics"),
+        html.H2(children="General Statistics"),
         html.Div(children=[
             f"Amazon: {eval.get_total(orders)}€",
             html.Br(),
@@ -48,9 +45,10 @@ def general_information(orders: List[Order]) -> html.Div:
     ])
 
 
-def plots(orders: List[Order]) -> html.Div:
+def gen_plots(orders: List[Order]) -> html.Div:
     return html.Div(children=[
-        html.H3(children="Plots"),
+        html.H2(children="Plots"),
+        html.H3(children='Amazon totals by year, split by categories'),
         gen_stacked_totals_graph(orders)
     ])
 
@@ -73,22 +71,25 @@ def gen_stacked_totals_graph(orders: List[Order]):
         gen_bar(eval.get_instant_video_per_year(orders), 'prime instant video'),
         gen_bar(eval.get_prime_member_fee_by_year(orders), 'amazon prime member fee'),
         gen_bar(eval.get_uncategorized_totals(orders), 'uncategorized'),
-    ],
-    )
+    ])
 
     fig.update_layout(barmode='stack',
-                      title_text='Amazon totals by year, split by categories',
                       yaxis=dict(title='Price in €', titlefont_size=18, tickfont_size=16),
                       xaxis=dict(title='Year', titlefont_size=18, tickfont_size=16),
                       legend=dict(
                           x=0, y=1.0, font_size=16,
                           bgcolor='rgba(255, 255, 255, 0)',
-                      )
-                      )
+                      ),
+                      height=750)
 
     fig.update_xaxes(dtick=1.0)
 
     return dcc.Graph(id='stacked-graph', figure=fig)
+
+
+def gen_line_by_month_graph():
+    # ToDo
+    pass
 
 
 if __name__ == '__main__':
