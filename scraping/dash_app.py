@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import copy
 from typing import List, Dict
 
 import dash
@@ -9,6 +10,15 @@ import plotly.graph_objs as go
 from . import evaluation as eval
 from . import file_handler as fh
 from .Data import Order
+
+layout = dict(
+    autosize=True,
+    margin=dict(l=30, r=30, b=20, t=40),
+    hovermode="closest",
+    plot_bgcolor="#F9F9F9",
+    paper_bgcolor="#F9F9F9",
+    legend=dict(font=dict(size=10), orientation="h"),
+)
 
 
 def main():
@@ -34,28 +44,45 @@ def head():
 def general_information(orders: List[Order]) -> html.Div:
     return html.Div(children=[
         html.H2(children="General Statistics"),
-        html.H3("Totals"),
-        html.Div(children=[
-            f"Amazon: {eval.get_total(orders)}€, ",
-            f"Audible: {eval.get_audible_total(orders)}€, ",
-            f"Prime Instant Video: {eval.get_instant_video_total(orders)}€"
-        ]),
-        html.H3("Orders"),
-        html.Div(children=[
-            html.P(f"Most expensive order: {eval.get_most_expensive_order(orders)[0].price}€"),
-            html.P(f"Order with most items: {len(eval.get_orders_with_most_items(orders)[0].items)}"),
-            html.P(f"total Order count: {eval.get_order_count(orders)}"),
-            html.P(f"total Item count: {eval.get_item_count(orders)}")
-        ])
+        html.Div([
+            html.Div(
+                [f" {eval.get_total(orders)}€", html.H6("Amazon (all)")],
+                className='mini_container'
+            ),
+            html.Div(
+                [f"{eval.get_audible_total(orders)}€", html.H6("Audible")],
+                className='mini_container'
+            ),
+            html.Div(
+                [f"{eval.get_instant_video_total(orders)}€", html.H6("Prime Instant Video")],
+                className='mini_container'
+            ),
+            html.Div(
+                [f"{eval.get_most_expensive_order(orders)[0].price}€", html.H6("max order price")],
+                className='mini_container'
+            ),
+            html.Div(
+                [f"{len(eval.get_orders_with_most_items(orders)[0].items)} items", html.H6("largest order")],
+                className='mini_container'
+            ),
+            html.Div(
+                [f"{eval.get_order_count(orders)}", html.H6("Orders")],
+                className='mini_container'
+            ),
+            html.Div(
+                [f"{eval.get_item_count(orders)}", html.H6("Items")],
+                className='mini_container'
+            ),
+        ],
+            className="row container-display"
+        )
     ])
 
 
 def gen_plots(orders: List[Order]) -> html.Div:
     return html.Div(children=[
         html.H2(children="Plots"),
-
-        html.H3(children='Amazon totals by year, split by categories'),
-        gen_stacked_totals_graph(orders),
+        html.Div(gen_stacked_totals_graph(orders), className="pretty_container"),
 
         html.H3(children='Amazon totals by month'),
         gen_scatter_by_month_graph(orders)
@@ -68,12 +95,8 @@ def gen_bar(data: Dict, name: str) -> go.Bar:
 
 def gen_stacked_totals_graph(orders: List[Order]) -> dcc.Graph:
     """ generates a graph with each bar subdivided into different categories
-        known categories:
-            - audible
-            - prime instant video
-            - ToDo (prime music unlimited)
-            - ToDo (prime membership fee)
-            - remaining
+        - ToDo (prime music unlimited)
+        - ToDo (prime membership fee)
     """
     fig = go.Figure(data=[
         gen_bar(eval.audible_total_by_year(orders), 'audible'),
@@ -81,14 +104,15 @@ def gen_stacked_totals_graph(orders: List[Order]) -> dcc.Graph:
         gen_bar(eval.prime_member_fee_by_year(orders), 'amazon prime member fee'),
         gen_bar(eval.added_balance_per_year(orders), 'balance added'),
         gen_bar(eval.uncategorized_totals_per_year(orders), 'uncategorized'),
-    ])
+    ], layout=copy.deepcopy(layout))
 
     fig.update_layout(
         barmode='stack',
         yaxis=dict(title='Price in €', titlefont_size=18, tickfont_size=16),
         xaxis=dict(title='Year', titlefont_size=18, tickfont_size=16),
         legend=dict(x=0, y=1.0, font_size=16, bgcolor='rgba(255, 255, 255, 0)'),
-        height=750
+        height=750,
+        title="Amazon totals by year, split by categories"
     )
 
     fig.update_xaxes(dtick=1.0)
