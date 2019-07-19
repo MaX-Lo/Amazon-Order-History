@@ -103,7 +103,8 @@ def get_total_by_year(orders: List[Order]) -> Dict[int, float]:
 
 
 def get_total(orders: List[Order]):
-    return reduce((lambda total, order: total + order.price), orders, 0)
+    total = reduce((lambda total, order: total + order.price), orders, 0)
+    return round(total, 2)
 
 
 def get_most_expensive_order(orders: List[Order]):
@@ -116,9 +117,13 @@ def get_order_count(orders: List[Order]):
 
 
 def get_audible_total(orders: List[Order]) -> float:
-    audible_orders = filter(lambda order: order.order_id[:3] == 'D01', orders)
-    total = sum(map(lambda order: order.price, audible_orders))
-    return total
+    total = sum(get_audible_total_by_year(orders).values())
+    return round(total, 2)
+
+
+def get_instant_video_total(orders: List[Order]) -> float:
+    total = sum(get_instant_video_per_year(orders).values())
+    return round(total, 2)
 
 
 def order_contains_audible_items(order: Order) -> bool:
@@ -163,7 +168,7 @@ def get_uncategorized_totals(orders: List[Order]) -> Dict[int, float]:
     amazon = get_total_by_year(orders)
     audible = get_audible_total_by_year(orders)
     prime_vid = get_instant_video_per_year(orders)
-    prime = get_prime_member_fee_total_by_year(orders)
+    prime = get_prime_member_fee_by_year(orders)
 
     remaining_totals = {}
     for year in amazon.keys():
@@ -176,8 +181,7 @@ def get_uncategorized_totals(orders: List[Order]) -> Dict[int, float]:
     return remaining_totals
 
 
-
-def get_prime_member_fee_total_by_year(orders: List[Order]) -> Dict[int, float]:
+def get_prime_member_fee_by_year(orders: List[Order]) -> Dict[int, float]:
     # ToDo
     return {}
 

@@ -18,30 +18,45 @@ def main():
 
     orders = fh.load_orders()
 
-    app.layout = html.Div(children=[
-        html.H1(children='Amazon Order History - Evaluation'),
-        html.Div(children='A web application to analyze different aspects of your amazon orders'),
-        gen_amazon_totals_graph(orders),
-        gen_stacked_totals_graph(orders)
-    ], style={'fontSize': 22})
+    app.layout = html.Div(className="container", children=[
+        head(),
+        general_information(orders),
+        plots(orders)
+    ], style={'fontSize': 18})
 
     app.run_server(debug=True)
 
 
-def gen_amazon_totals_graph(orders: List[Order]):
-    total_by_year_amazon = eval.get_total_by_year(orders)
-    data_amazon = [gen_bar(total_by_year_amazon, 'amazon totals')]
-    return gen_totals_graph(data_amazon, "Amazon totals by year", "amazon-graph")
+def head():
+    return html.Header(children=[
+        html.H1(children='Amazon Order History - Evaluation'),
+        'A web application to analyze different aspects of your amazon orders'
+    ])
+
+
+def general_information(orders: List[Order]) -> html.Div:
+    # ToDo
+    return html.Div(children=[
+        html.H3(children="General Statistics"),
+        html.Div(children=[
+            f"Amazon: {eval.get_total(orders)}€",
+            html.Br(),
+            f"Audible: {eval.get_audible_total(orders)}€",
+            html.Br(),
+            f"Prime Instant Video: {eval.get_instant_video_total(orders)}€"
+        ])
+    ])
+
+
+def plots(orders: List[Order]) -> html.Div:
+    return html.Div(children=[
+        html.H3(children="Plots"),
+        gen_stacked_totals_graph(orders)
+    ])
 
 
 def gen_bar(data: Dict, name: str) -> go.Bar:
     return go.Bar(x=list(data.keys()), y=list(data.values()), name=name)
-
-
-def gen_totals_graph(data, title: str, id: str) -> dcc.Graph:
-    fig: go.Figure = go.Figure(data=data)
-    fig.update_layout(title_text=title)
-    return dcc.Graph(id=id, figure=fig)
 
 
 def gen_stacked_totals_graph(orders: List[Order]):
@@ -56,12 +71,23 @@ def gen_stacked_totals_graph(orders: List[Order]):
     fig = go.Figure(data=[
         gen_bar(eval.get_audible_total_by_year(orders), 'audible totals'),
         gen_bar(eval.get_instant_video_per_year(orders), 'prime instant video'),
-        gen_bar(eval.get_prime_member_fee_total_by_year(orders), 'amazon prime member fee'),
+        gen_bar(eval.get_prime_member_fee_by_year(orders), 'amazon prime member fee'),
         gen_bar(eval.get_uncategorized_totals(orders), 'uncategorized'),
-    ])
+    ],
+    )
 
-    fig.update_layout(barmode='stack')
-    fig.update_layout(title_text='Amazon totals by year, split by categories')
+    fig.update_layout(barmode='stack',
+                      title_text='Amazon totals by year, split by categories',
+                      yaxis=dict(title='Price in €', titlefont_size=18, tickfont_size=16),
+                      xaxis=dict(title='Year', titlefont_size=18, tickfont_size=16),
+                      legend=dict(
+                          x=0, y=1.0, font_size=16,
+                          bgcolor='rgba(255, 255, 255, 0)',
+                      )
+                      )
+
+    fig.update_xaxes(dtick=1.0)
+
     return dcc.Graph(id='stacked-graph', figure=fig)
 
 
