@@ -4,12 +4,11 @@ from typing import List, Dict
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
-
 import plotly.graph_objs as go
 
-from scraping import evaluation as eval
-from scraping import file_handler as fh
-from scraping.Data import Order
+from . import evaluation as eval
+from . import file_handler as fh
+from .Data import Order
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -49,14 +48,14 @@ def gen_stacked_totals_graph(orders: List[Order]):
     """ generates a graph with each bar subdivided into different categories
         known categories:
             - audible
-            - (prime instant video)
-            - (prime music unlimited)
-            - (prime)
+            - prime instant video
+            - ToDo (prime music unlimited)
+            - ToDo (prime membership fee)
             - remaining
     """
     fig = go.Figure(data=[
         gen_bar(eval.get_audible_total_by_year(orders), 'audible totals'),
-        gen_bar(eval.get_prime_vid_total_by_year(orders), 'prime instant video'),
+        gen_bar(eval.get_instant_video_per_year(orders), 'prime instant video'),
         gen_bar(eval.get_prime_member_fee_total_by_year(orders), 'amazon prime member fee'),
         gen_bar(eval.get_uncategorized_totals(orders), 'uncategorized'),
     ])

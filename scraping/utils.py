@@ -13,17 +13,6 @@ MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August'
           'Dezember']
 
 
-def save_file(file_path: str, data: str):
-    with open(file_path, 'w') as fh:
-        fh.write(data)
-
-
-def read_json_file(file_path):
-    if os.path.exists(file_path):
-        with open(file_path, 'r') as file:
-            return json.load(file)
-
-
 def str_to_datetime(date_str: str) -> datetime.datetime:
     """ expects a date str formatted in german date format as 'day. month year' e.g. '4. September 2018' """
     day_str, month_str, year_str = date_str.split(' ')

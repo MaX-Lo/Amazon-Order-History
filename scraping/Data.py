@@ -1,15 +1,18 @@
 import datetime
+from dataclasses import dataclass
 from typing import List, Dict
+
 import dateutil.parser
 
 from . import utils
 
 
+@dataclass
 class Item:
-    def __init__(self, price, link, title):
-        self.price = price
-        self.link = link
-        self.title = title
+    price: float
+    link: str
+    title: str
+    seller: str
 
     def to_dict(self) -> Dict:
         return self.__dict__
@@ -17,15 +20,15 @@ class Item:
     @staticmethod
     def from_dict(item_dict: Dict) -> 'Item':
         """ returns an item object for a given order as dict """
-        return Item(item_dict['price'], item_dict['link'], item_dict['title'])
+        return Item(item_dict['price'], item_dict['link'], item_dict['title'], item_dict['seller'])
 
 
+@dataclass
 class Order:
-    def __init__(self, order_id: str, price: float, date: datetime.datetime, items: List[Item]):
-        self.order_id = order_id
-        self.price = price
-        self.date = date
-        self.items = items
+    order_id: str
+    price: float
+    date: datetime.datetime
+    items: List[Item]
 
     def is_equal(self, order) -> bool:
         return order.order_id == self.order_id
@@ -42,6 +45,6 @@ class Order:
         """ returns an order object for a given order as dict """
         id = order_dict['order_id']
         price = float(order_dict['price'])
-        date = dateutil.parser.parse(order_dict['date']) # datetime.datetime.strptime(order_dict['date'], '%Y-%m-%d')
+        date = dateutil.parser.parse(order_dict['date'])  # datetime.datetime.strptime(order_dict['date'], '%Y-%m-%d')
         items = [Item.from_dict(item) for item in order_dict['items']]
         return Order(id, price, date, items)

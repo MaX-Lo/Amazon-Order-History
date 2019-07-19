@@ -1,6 +1,6 @@
+click
 plotly == 4.0.0
 selenium
-pytype
 python-dateutil
 numpy
 matplotlib
