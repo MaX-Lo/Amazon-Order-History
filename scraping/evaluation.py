@@ -3,94 +3,7 @@ from functools import reduce
 
 from typing import List, Dict
 
-import numpy as np
-import matplotlib.pyplot as plt
-
-from . import utils
 from .Data import Order
-from . import file_handler as fh
-
-
-def main():
-    orders = fh.load_orders()
-
-    print(f'counted {get_order_count(orders)} orders with a total price of {get_total(orders)} Euro')
-    print(f'most expensive order was: {get_most_expensive_order(orders)}')
-    print(f'audible total: {get_audible_total(orders)}')
-
-    #plot_expenses_by_year(orders)
-    plot_audible_by_month(orders)
-    plot_all(orders)
-
-
-def plot_all(orders: List[Order]):
-    amazon_totals_by_year = utils.sort_dict_by_key(total_by_year(orders))
-    years = tuple(amazon_totals_by_year.keys())
-    bar_amount = np.arange(len(years))
-
-    instant_video_totals_by_year = instant_video_total_per_year(orders)
-    audible_totals_by_year = audible_total_by_year(orders)
-    for year in amazon_totals_by_year.keys():
-        if year not in audible_totals_by_year.keys():
-            audible_totals_by_year[year] = 0
-        if year not in instant_video_totals_by_year.keys():
-            instant_video_totals_by_year[year] = 0
-
-    audible_totals_by_year = utils.sort_dict_by_key(audible_totals_by_year)
-    instant_video_totals_by_year = utils.sort_dict_by_key(instant_video_totals_by_year)
-
-    amazon_plot = plt.bar(bar_amount, list(amazon_totals_by_year.values()), align='center', alpha=0.5)
-    audible_plot = plt.bar(bar_amount, list(audible_totals_by_year.values()), align='center', alpha=0.5)
-    instant_video_plot = plt.bar(bar_amount, list(instant_video_totals_by_year.values()), align='center', alpha=0.5)
-
-    plt.ylabel('Amount in Euro')
-    plt.xlabel('Year')
-    plt.xticks(bar_amount, years)
-    plt.legend((amazon_plot[0], audible_plot[0], instant_video_plot[0]), ('Amazon Purchases', 'Audible Purchases', 'Instant Video Purchases'))
-
-    plt.show()
-
-
-def plot_expenses_by_year(orders: List[Order]):
-    totals_by_year = total_by_year(orders)
-    objects = tuple(totals_by_year.keys())
-    y_pos = np.arange(len(objects))
-
-    plt.bar(y_pos, list(totals_by_year.values()), align='center', alpha=0.5)
-    plt.xticks(y_pos, objects)
-    plt.ylabel('Amount in Euro')
-    plt.xlabel('Year')
-    plt.title('Amazon Purchases')
-
-    plt.show()
-
-
-def plot_instant_video_by_month(orders: List[Order]):
-    totals_by_year = instant_video_total_per_year(orders)
-    objects = tuple(totals_by_year.keys())
-    y_pos = np.arange(len(objects))
-
-    plt.bar(y_pos, list(totals_by_year.values()), align='center', alpha=0.5)
-    plt.xticks(y_pos, objects)
-    plt.ylabel('Amount in Euro')
-    plt.xlabel('Year')
-    plt.title('Instant Video Purchases')
-
-    plt.show()
-
-
-def plot_audible_by_month(orders: List[Order]):
-    totals_by_year = audible_total_by_year(orders)
-    objects = tuple(totals_by_year.keys())
-    y_pos = np.arange(len(objects))
-
-    plt.bar(y_pos, list(totals_by_year.values()), align='center', alpha=0.5)
-    plt.xticks(y_pos, objects)
-    plt.ylabel('Amount in Euro')
-    plt.xlabel('Year')
-    plt.title('Audible Purchases')
-
-    plt.show()
 
 
 def get_most_expensive_order(orders: List[Order]):
@@ -196,7 +109,3 @@ def totals_by_month(orders: List[Order]) -> Dict[int, float]:
         totals[key] += order.price
     totals = {year: round(total, 2) for year, total in totals.items()}
     return totals
-
-
-if __name__ == '__main__':
-    main()

@@ -3,7 +3,7 @@ from typing import Optional
 
 import click
 
-from . import evaluation, dash_app, scraping
+from . import dash_app, scraping
 
 
 @click.group()
@@ -14,11 +14,6 @@ def main():
 @main.command()
 def dash():
     dash_app.main()
-
-
-@main.command()
-def eval():
-    evaluation.main()
 
 
 @main.command()

@@ -2,8 +2,5 @@ click
 plotly == 4.0.0
 selenium
 python-dateutil
-numpy
-matplotlib
-
 dash
 dash-daq
