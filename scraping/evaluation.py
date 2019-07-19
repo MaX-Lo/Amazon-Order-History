@@ -6,13 +6,23 @@ from typing import List, Dict
 from .Data import Order
 
 
-def get_most_expensive_order(orders: List[Order]):
+def get_most_expensive_order(orders: List[Order]) -> List[Order]:
+    """ get a list with the most expensive order, contains usually only one element """
     max_order_price = max(map(lambda order: order.price, orders))
     return list(filter(lambda order: order.price == max_order_price, orders))
 
 
-def get_order_count(orders: List[Order]):
+def get_orders_with_most_items(orders: List[Order]) -> List[Order]:
+    max_item_count = max([len(order.items) for order in orders])
+    return list(filter(lambda order: len(order.items) == max_item_count, orders))
+
+
+def get_order_count(orders: List[Order]) -> int:
     return len(orders)
+
+
+def get_item_count(orders: List[Order]) -> int:
+    return sum([len(order.items) for order in orders])
 
 
 def get_total(orders: List[Order]):
@@ -130,3 +140,16 @@ def totals_by_month(orders: List[Order]) -> Dict[int, float]:
         totals[key] += order.price
     totals = {year: round(total, 2) for year, total in totals.items()}
     return totals
+
+
+def trend_by_month(totals: Dict[int, float]):
+    """ return a trend value calculated through the average of the last 6 month """
+    trends = dict()
+    last = [0.0] * 6
+
+    for date, total in totals.items():
+        last.pop(0)
+        last.append(total)
+        trend = sum(last) / len(last)
+        trends[date] = trend
+    return trends

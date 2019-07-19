@@ -28,19 +28,24 @@ def main():
 def head():
     return html.Header(children=[
         html.H1(children='Amazon Order History - Evaluation'),
-        'A web application to analyze different aspects of your amazon orders'
     ])
 
 
 def general_information(orders: List[Order]) -> html.Div:
     return html.Div(children=[
         html.H2(children="General Statistics"),
+        html.H3("Totals"),
         html.Div(children=[
-            f"Amazon: {eval.get_total(orders)}€",
-            html.Br(),
-            f"Audible: {eval.get_audible_total(orders)}€",
-            html.Br(),
+            f"Amazon: {eval.get_total(orders)}€, ",
+            f"Audible: {eval.get_audible_total(orders)}€, ",
             f"Prime Instant Video: {eval.get_instant_video_total(orders)}€"
+        ]),
+        html.H3("Orders"),
+        html.Div(children=[
+            html.P(f"Most expensive order: {eval.get_most_expensive_order(orders)[0].price}€"),
+            html.P(f"Order with most items: {len(eval.get_orders_with_most_items(orders)[0].items)}"),
+            html.P(f"total Order count: {eval.get_order_count(orders)}"),
+            html.P(f"total Item count: {eval.get_item_count(orders)}")
         ])
     ])
 
@@ -97,8 +102,11 @@ def gen_scatter(data: Dict, name: str) -> dcc.Graph:
 
 def gen_scatter_by_month_graph(orders: List[Order]) -> go.Figure:
     """ generates a line graph with spend amount for each month """
+    totals_by_month = eval.totals_by_month(orders)
+
     fig = go.Figure(data=[
-        gen_scatter(eval.totals_by_month(orders), 'uncategorized')
+        gen_scatter(totals_by_month, 'total'),
+        gen_scatter(eval.trend_by_month(totals_by_month), 'trend')
     ])
 
     fig.update_layout(
