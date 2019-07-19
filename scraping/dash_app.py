@@ -48,8 +48,12 @@ def general_information(orders: List[Order]) -> html.Div:
 def gen_plots(orders: List[Order]) -> html.Div:
     return html.Div(children=[
         html.H2(children="Plots"),
+
         html.H3(children='Amazon totals by year, split by categories'),
-        gen_stacked_totals_graph(orders)
+        gen_stacked_totals_graph(orders),
+
+        html.H3(children='Amazon totals by month'),
+        gen_scatter_by_month_graph(orders)
     ])
 
 
@@ -57,7 +61,7 @@ def gen_bar(data: Dict, name: str) -> go.Bar:
     return go.Bar(x=list(data.keys()), y=list(data.values()), name=name)
 
 
-def gen_stacked_totals_graph(orders: List[Order]):
+def gen_stacked_totals_graph(orders: List[Order]) -> dcc.Graph:
     """ generates a graph with each bar subdivided into different categories
         known categories:
             - audible
@@ -67,29 +71,42 @@ def gen_stacked_totals_graph(orders: List[Order]):
             - remaining
     """
     fig = go.Figure(data=[
-        gen_bar(eval.get_audible_total_by_year(orders), 'audible totals'),
-        gen_bar(eval.get_instant_video_per_year(orders), 'prime instant video'),
-        gen_bar(eval.get_prime_member_fee_by_year(orders), 'amazon prime member fee'),
-        gen_bar(eval.get_uncategorized_totals(orders), 'uncategorized'),
+        gen_bar(eval.audible_total_by_year(orders), 'audible'),
+        gen_bar(eval.instant_video_total_per_year(orders), 'prime instant video'),
+        gen_bar(eval.prime_member_fee_by_year(orders), 'amazon prime member fee'),
+        gen_bar(eval.uncategorized_totals_per_year(orders), 'uncategorized'),
     ])
 
-    fig.update_layout(barmode='stack',
-                      yaxis=dict(title='Price in €', titlefont_size=18, tickfont_size=16),
-                      xaxis=dict(title='Year', titlefont_size=18, tickfont_size=16),
-                      legend=dict(
-                          x=0, y=1.0, font_size=16,
-                          bgcolor='rgba(255, 255, 255, 0)',
-                      ),
-                      height=750)
+    fig.update_layout(
+        barmode='stack',
+        yaxis=dict(title='Price in €', titlefont_size=18, tickfont_size=16),
+        xaxis=dict(title='Year', titlefont_size=18, tickfont_size=16),
+        legend=dict(x=0, y=1.0, font_size=16, bgcolor='rgba(255, 255, 255, 0)'),
+        height=750
+    )
 
     fig.update_xaxes(dtick=1.0)
 
     return dcc.Graph(id='stacked-graph', figure=fig)
 
 
-def gen_line_by_month_graph():
-    # ToDo
-    pass
+def gen_scatter(data: Dict, name: str) -> dcc.Graph:
+    return go.Scatter(x=list(data.keys()), y=list(data.values()), name=name)
+
+
+def gen_scatter_by_month_graph(orders: List[Order]) -> go.Figure:
+    """ generates a line graph with spend amount for each month """
+    fig = go.Figure(data=[
+        gen_scatter(eval.totals_by_month(orders), 'uncategorized')
+    ])
+
+    fig.update_layout(
+        yaxis=dict(title='Price in €', titlefont_size=18, tickfont_size=16),
+        xaxis=dict(titlefont_size=18, tickfont_size=16),
+        legend=dict(x=0, y=1.0, font_size=16, bgcolor='rgba(255, 255, 255, 0)'),
+    )
+
+    return dcc.Graph(id='scatter-graph', figure=fig)
 
 
 if __name__ == '__main__':
