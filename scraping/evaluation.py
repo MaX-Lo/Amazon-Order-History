@@ -95,7 +95,7 @@ def get_order_count(orders: List[Order]):
     return len(orders)
 
 
-def get_audible_total(orders: List[Order]):
+def get_audible_total(orders: List[Order]) -> float:
     audible_orders = filter(lambda order: order.order_id[:3] == 'D01', orders)
     total = sum(map(lambda order: order.price, audible_orders))
     return total
@@ -118,6 +118,33 @@ def get_audible_total_by_year(orders: List[Order]) -> Dict[int, float]:
     total_by_year = {year: round(total, 2) for year, total in total_by_year.items()}
 
     return total_by_year
+
+
+def get_uncategorized_totals(orders: List[Order]) -> Dict[int, float]:
+    amazon = get_total_by_year(orders)
+    audible = get_audible_total_by_year(orders)
+    prime_vid = get_prime_vid_total_by_year(orders)
+    prime = get_prime_member_fee_total_by_year(orders)
+
+    remaining_totals = {}
+    for year in amazon.keys():
+        remaining = amazon[year]
+        remaining = remaining - audible[year] if year in audible.keys() else remaining
+        remaining = remaining - prime_vid[year] if year in prime_vid.keys() else remaining
+        remaining = remaining - prime[year] if year in prime.keys() else remaining
+
+        remaining_totals[year] = remaining
+    return remaining_totals
+
+
+def get_prime_vid_total_by_year(orders: List[Order]) -> Dict[int, float]:
+    # ToDo
+    return {}
+
+
+def get_prime_member_fee_total_by_year(orders: List[Order]) -> Dict[int, float]:
+    # ToDo
+    return {}
 
 
 if __name__ == '__main__':
