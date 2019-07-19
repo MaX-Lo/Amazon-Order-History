@@ -44,38 +44,58 @@ def order_contains_instant_video_items(order: Order) -> bool:
     return False
 
 
+def order_contains_balance_item(order: Order) -> bool:
+    for item in order.items:
+        if item.title == "Amazon-Konto aufladen":
+            return True
+    return False
+
+
 def total_by_year(orders: List[Order]) -> Dict[int, float]:
-    totals_by_year = dict()
+    totals = dict()
     for order in orders:
-        if order.date.year not in totals_by_year:
-            totals_by_year[order.date.year] = 0
-        totals_by_year[order.date.year] += order.price
-    totals_by_year = {year: round(total, 2) for year, total in totals_by_year.items()}
-    return totals_by_year
+        if order.date.year not in totals:
+            totals[order.date.year] = 0
+        totals[order.date.year] += order.price
+    totals = {year: round(total, 2) for year, total in totals.items()}
+    return totals
 
 
 def audible_total_by_year(orders: List[Order]) -> Dict[int, float]:
     audible_orders = [order for order in orders if order_contains_audible_items(order)]
-    total_by_year = {}
+    totals = {}
     for order in audible_orders:
-        if order.date.year not in total_by_year.keys():
-            total_by_year[order.date.year] = 0
-        total_by_year[order.date.year] += order.price
-    total_by_year = {year: round(total, 2) for year, total in total_by_year.items()}
+        if order.date.year not in totals.keys():
+            totals[order.date.year] = 0
+        totals[order.date.year] += order.price
+    totals = {year: round(total, 2) for year, total in totals.items()}
 
-    return total_by_year
+    return totals
 
 
 def instant_video_total_per_year(orders: List[Order]) -> Dict[int, float]:
     instant_video_orders = [order for order in orders if order_contains_instant_video_items(order)]
-    total_by_year = {}
+    totals = {}
     for order in instant_video_orders:
-        if order.date.year not in total_by_year.keys():
-            total_by_year[order.date.year] = 0
-        total_by_year[order.date.year] += order.price
-    total_by_year = {year: round(total, 2) for year, total in total_by_year.items()}
+        if order.date.year not in totals.keys():
+            totals[order.date.year] = 0
+        totals[order.date.year] += order.price
+    totals = {year: round(total, 2) for year, total in totals.items()}
 
-    return total_by_year
+    return totals
+
+
+def added_balance_per_year(orders: List[Order]) -> Dict[int, float]:
+    balance_orders = [order for order in orders if order_contains_balance_item(order)]
+
+    totals = {}
+    for order in balance_orders:
+        if order.date.year not in totals.keys():
+            totals[order.date.year] = 0
+        totals[order.date.year] += order.price
+    totals = {year: round(total, 2) for year, total in totals.items()}
+
+    return totals
 
 
 def uncategorized_totals_per_year(orders: List[Order]) -> Dict[int, float]:
@@ -83,6 +103,7 @@ def uncategorized_totals_per_year(orders: List[Order]) -> Dict[int, float]:
     audible = audible_total_by_year(orders)
     prime_vid = instant_video_total_per_year(orders)
     prime = prime_member_fee_by_year(orders)
+    balance = added_balance_per_year(orders)
 
     remaining_totals = {}
     for year in amazon.keys():
@@ -90,7 +111,7 @@ def uncategorized_totals_per_year(orders: List[Order]) -> Dict[int, float]:
         remaining = remaining - audible[year] if year in audible.keys() else remaining
         remaining = remaining - prime_vid[year] if year in prime_vid.keys() else remaining
         remaining = remaining - prime[year] if year in prime.keys() else remaining
-
+        remaining = remaining - balance[year] if year in prime.keys() else remaining
         remaining_totals[year] = remaining
     return remaining_totals
 

@@ -74,6 +74,7 @@ def gen_stacked_totals_graph(orders: List[Order]) -> dcc.Graph:
         gen_bar(eval.audible_total_by_year(orders), 'audible'),
         gen_bar(eval.instant_video_total_per_year(orders), 'prime instant video'),
         gen_bar(eval.prime_member_fee_by_year(orders), 'amazon prime member fee'),
+        gen_bar(eval.added_balance_per_year(orders), 'balance added'),
         gen_bar(eval.uncategorized_totals_per_year(orders), 'uncategorized'),
     ])
 
