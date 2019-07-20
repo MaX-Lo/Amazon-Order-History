@@ -283,14 +283,16 @@ def get_item_price(item_element, order_element, browser: WebDriver) -> float:
             order_price_details = order_price_details.split(" ")[1]
             item_price = order_price_details.split("\n")[0]
 
-            browser.close()
-            browser.switch_to.window(browser.window_handles[0])
-
         except (NoSuchElementException, ValueError) as e:
-            browser.switch_to.window(browser.window_handles[0])
             print(f'Could not parse price for order:\n{item_element.text}')
     return item_price
 
+
+def close_all_side_windows(browser: WebDriver):
+    while 1 < len(browser.window_handles):
+        browser.switch_to.window(browser.window_handles[-1])
+        browser.close()
+    browser.switch_to.window(browser.window_handles[0])
 
 def close(browser):
     browser.close()
