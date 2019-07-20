@@ -54,11 +54,13 @@ def get_orders(browser: WebDriver, start_year: int, end_year: int) -> List[Order
         to save network capacities it is checked if some orders got already fetched earlier in 'orders.json'
 
         :param browser is a WebDriver pointing to the orders page and having the user logged in already
+        :param start_year the year to start with (included)
+        :param end_year the year to end with (included)
         """
     orders: List[Order] = []
     last_date: datetime.datetime = datetime.datetime(year=start_year, month=1, day=1)
-    end_date: datetime.datetime = datetime.datetime.now() if end_year == datetime.datetime.now().year else datetime.datetime(
-        year=end_year, month=12, day=31)
+    end_date: datetime.datetime = datetime.datetime.now() if end_year == datetime.datetime.now().year else \
+        datetime.datetime(year=end_year, month=12, day=31)
 
     data = file_handler.read_json_file("orders.json")
     if data:
@@ -70,8 +72,8 @@ def get_orders(browser: WebDriver, start_year: int, end_year: int) -> List[Order
         scraped_orders: List[Order] = scrape_orders(browser, last_date, end_date)
 
         # check for intersection of fetched orders
-        new_orders: List[Order] = list(
-            filter(lambda order: order.order_id not in list(map(lambda order: order.order_id, orders)), scraped_orders))
+        existing_order_ids = list(map(lambda order: order.order_id, orders))
+        new_orders: List[Order] = list(filter(lambda order: order.order_id not in existing_order_ids, scraped_orders))
         orders.extend(new_orders)
 
     else:
@@ -147,8 +149,8 @@ def scrape_page_for_orders(browser: WebDriver) -> List[Order]:
             for item_element in items_by_seller.find_elements_by_class_name('a-fixed-left-grid'):
                 seller = get_item_seller(item_element)
                 title, link = get_item_title(item_element)
-                item_price = order_price if is_digital_order(order_id) else get_item_price(item_element, order_element,
-                                                                                           browser)
+                item_price = order_price if is_digital_order(order_id) else \
+                    get_item_price(item_element, order_element, browser)
 
                 items.append(Item(item_price, link, title, seller))
         orders.append(Order(order_id, order_price, date, items))
@@ -179,6 +181,66 @@ def get_order_info(order_info_element: WebElement) -> Tuple[str, float, datetime
     date_str = order_info_list[0]
     date = utils.str_to_datetime(date_str)
     return order_id, order_price, date
+
+
+def get_item_seller(item_element) -> str:
+    try:
+        seller = item_element.text.split('durch: ')[1]
+        seller = seller.split('\n')[0]
+        return seller
+    except IndexError:
+        return 'not available'
+
+
+def get_item_title(item_element) -> (str, str):
+    item_elements = item_element.find_element_by_class_name('a-col-right') \
+        .find_elements_by_class_name('a-row')
+    item_title_element = item_elements[0]
+    title = item_title_element.text
+    try:
+        link = item_title_element.find_element_by_class_name('a-link-normal').get_attribute('href')
+    except NoSuchElementException:
+        link = 'not available'
+
+    return title, link
+
+
+def get_item_price(item_element: WebElement, order_element: WebElement, browser: WebDriver) -> float:
+    try:
+        item_price_str = item_element.find_element_by_class_name('a-color-price').text
+        item_price = price_str_to_float(item_price_str)
+    except (NoSuchElementException, ValueError) as e:
+        item_price = get_item_price_through_details_page(order_element, browser)
+
+    return item_price
+
+
+def get_item_price_through_details_page(order_element: WebElement, browser: WebDriver) -> float:
+    item_price = 0
+    try:
+        order_details_link = order_element.find_element_by_class_name('a-link-normal').get_attribute('href')
+
+        browser.execute_script(f'''window.open("{order_details_link}","_blank");''')
+        browser.switch_to.window(browser.window_handles[1])
+        wait_for_element_by_id(browser, 'od-subtotals')
+
+        order_price_details = browser.find_element_by_id('od-subtotals')
+        order_price_details = order_price_details.text.split("Summe:")[1]
+        order_price_details = order_price_details.split(" ")[1]
+
+        item_price = order_price_details.split("\n")[0]
+
+        browser.close()
+        browser.switch_to.window(browser.window_handles[0])
+
+    except (NoSuchElementException, ValueError) as e:
+        item_price = 0
+        browser.close()
+        browser.switch_to.window(browser.window_handles[0])
+        print(f'Could not parse price for order:\n{order_element.text}')
+
+    finally:
+        return item_price
 
 
 def navigate_to_orders_page(browser: WebDriver):
@@ -241,55 +303,6 @@ def is_digital_order(order_id):
 
 def price_str_to_float(price_str) -> float:
     return float((price_str[4:]).replace(',', '.'))
-
-
-def get_item_seller(item_element) -> str:
-    try:
-        seller = item_element.text.split('durch: ')[1]
-        seller = seller.split('\n')[0]
-        return seller
-    except IndexError:
-        return 'not available'
-
-
-def get_item_title(item_element) -> (str, str):
-    item_elements = item_element.find_element_by_class_name('a-col-right') \
-        .find_elements_by_class_name('a-row')
-    item_title_element = item_elements[0]
-    title = item_title_element.text
-    try:
-        link = item_title_element.find_element_by_class_name('a-link-normal').get_attribute('href')
-    except NoSuchElementException:
-        link = 'not available'
-
-    return title, link
-
-
-def get_item_price(item_element, order_element, browser: WebDriver) -> float:
-    item_price = 0
-    try:
-        item_price_str = item_element.find_element_by_class_name('a-color-price').text
-        item_price = price_str_to_float(item_price_str)
-    except (NoSuchElementException, ValueError) as e:
-        try:
-            order_details_link = order_element.find_element_by_class_name('a-link-normal').get_attribute('href')
-
-            browser.execute_script(f'''window.open("{order_details_link}","_blank");''')
-            browser.switch_to.window(browser.window_handles[1])
-            wait_for_element_by_id(browser, 'od-subtotals')
-
-            order_price_details = browser.find_element_by_id('od-subtotals')
-            order_price_details = order_price_details.text.split("Summe:")[1]
-            order_price_details = order_price_details.split(" ")[1]
-            item_price = order_price_details.split("\n")[0]
-
-            browser.close()
-            browser.switch_to.window(browser.window_handles[0])
-
-        except (NoSuchElementException, ValueError) as e:
-            browser.switch_to.window(browser.window_handles[0])
-            print(f'Could not parse price for order:\n{item_element.text}')
-    return item_price
 
 
 def close(browser):
