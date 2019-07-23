@@ -1,6 +1,7 @@
 import datetime
 import json
 from typing import List, Tuple, Optional, Dict
+import time
 
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver import Firefox, FirefoxProfile
@@ -25,7 +26,7 @@ def main(email: str, password: Optional[str], headless: bool, start: int, end: i
 
     file_handler.save_file('orders.json', json.dumps([order.to_dict() for order in orders]))
 
-    close(browser)
+    browser.quit()
 
 
 def setup_scraping(headless, email, password):
@@ -42,7 +43,7 @@ def setup_scraping(headless, email, password):
     complete_sign_in_form(browser, email, password)
     if not signed_in_successful(browser):
         print("Couldn't sign in. Maybe your credentials are incorrect?")
-        close(browser)
+        browser.quit()
         exit()
     skip_adding_phone_number(browser)
     return browser
@@ -91,16 +92,20 @@ def scrape_orders(browser: WebDriver, start_date: datetime.datetime, end_date: d
     assert start_year <= end_year, "start year must be before end year"
     assert start_year >= 2010, "Amazon order history works only for years after 2009"
     assert end_year <= datetime.datetime.now().year, "End year can not be in the future"
-
     orders = []
 
+    start_time = time.time()
     # order filter option 0 and 1 are already contained in option 2 [3months, 6months, currYear, lastYear, ...]
     start_index = 2 + (datetime.datetime.now().year - end_year)
     end_index = 2 + (datetime.datetime.now().year - start_year) + 1
 
     for order_filter_index in range(start_index, end_index):
         # open the dropdown
-        wait_for_element_by_id(browser, 'a-autoid-1-announce')
+        if not wait_for_element_by_id(browser, 'a-autoid-1-announce'):
+            print('---------------------------------------------')
+            print(f'FAILED: {datetime.datetime.now().year + 2 - order_filter_index}')
+            print('---------------------------------------------')
+            continue
         browser.find_element_by_id('a-autoid-1-announce').click()
 
         # select and click on a order filter
@@ -115,7 +120,7 @@ def scrape_orders(browser: WebDriver, start_date: datetime.datetime, end_date: d
             orders_on_page: List[Order] = scrape_page_for_orders(browser, extensive)
             orders.extend(orders_on_page)
 
-            if start_date > orders_on_page[-1].date:
+            if len(orders_on_page) > 0 and start_date > orders_on_page[-1].date:
                 break
             if is_paging_menu_available(browser):
                 pagination_element = browser.find_element_by_class_name('a-pagination')
@@ -127,11 +132,27 @@ def scrape_orders(browser: WebDriver, start_date: datetime.datetime, end_date: d
                 next_page_link = pagination_element.find_element_by_class_name('a-last') \
                     .find_element_by_css_selector('a').get_attribute('href')
                 browser.get(next_page_link)
-        year = datetime.datetime.now().year + 2 - order_filter_index
-        progress = round((order_filter_index - 1) / (end_index - 2.0) * 100)
-        print(f'finished year {year}, ({progress}%)')
+        current_year = datetime.datetime.now().year + 2 - order_filter_index
+        print_progress(start_year,end_year, current_year, len(orders), start_time)
 
     return orders
+
+
+def print_progress(start_year: int, end_year: int, current_year: int, orders_len: int, scraping_start_time):
+    already_scraped_years = end_year - current_year + 1
+    years_ahead = current_year - start_year
+
+    average_orders_per_year = orders_len / already_scraped_years
+    orders_to_do = years_ahead * average_orders_per_year
+    orders_percentage = orders_len / (orders_len + orders_to_do) * 100
+
+    time_passed = time.time() - scraping_start_time
+    average_time_per_year = time_passed / already_scraped_years
+    end_time = time.time() + average_time_per_year * years_ahead
+    aproximited_time_to_end = end_time - scraping_start_time
+    print_time = str(datetime.timedelta(seconds=aproximited_time_to_end))
+
+    print(f'Finished {current_year} / {orders_percentage}%. Approximately finished in {print_time}')
 
 
 def scrape_page_for_orders(browser: WebDriver, extensive: bool) -> List[Order]:
@@ -152,9 +173,7 @@ def scrape_page_for_orders(browser: WebDriver, extensive: bool) -> List[Order]:
                 title, link = get_item_title(item_element)
                 item_price = order_price if is_digital_order(order_id) else \
                     get_item_price(item_element, order_element, browser)
-                print(extensive)
                 categories = get_item_categories(link, browser) if extensive else dict()
-                print(categories)
 
                 items.append(Item(item_price, link, title, seller, categories))
 
@@ -333,8 +352,3 @@ def is_digital_order(order_id):
 
 def price_str_to_float(price_str) -> float:
     return float((price_str[4:]).replace(',', '.'))
-
-
-def close(browser):
-    browser.close()
-    quit()

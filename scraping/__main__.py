@@ -19,15 +19,15 @@ def dash():
 @main.command()
 @click.option("--email", required=True, help="The users email address")
 @click.option("--password", required=False, default=None, help="the users password")
-@click.option("--headless", required=False, default=False,
+@click.option("--headless/--no-headless", required=False, default=True,
               help="run the browser in headless mode (browser is invisible")
 @click.option("--start", default=2010, help="the year to start with. If not set 2010 is used.")
 @click.option("--end", default=datetime.datetime.now().year,
               help="the year to end with. If not set the current year is used.")
-@click.option("--extensive", default=False,
+@click.option("--extensive", default=True,
               help="if set to False categorization for items isn't available, but scraping itself should be faster")
 def scrape(email: str, password: Optional[str], headless: bool, start: int, end: int, extensive: bool):
-    scraping.main(email, password, headless, start, end, extensive)
+    scraping.main(email, password, bool(headless), start, end, extensive)
 
 
 if __name__ == '__main__':

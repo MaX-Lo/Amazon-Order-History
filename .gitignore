@@ -4,4 +4,5 @@
 geckodriver.log
 orders.json
 pw.txt
+.pw.txt
 env
