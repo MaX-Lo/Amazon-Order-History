@@ -1,6 +1,6 @@
 import datetime
 import json
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict
 
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver import Firefox, FirefoxProfile
@@ -13,7 +13,7 @@ from .Data import Order, Item
 from .utils import wait_for_element_by_class_name, wait_for_element_by_id
 
 
-def main(email: str, password: Optional[str], headless: bool, start: int, end: int):
+def main(email: str, password: Optional[str], headless: bool, start: int, end: int, extensive: bool):
     if password is None:
         password = file_handler.load_password()
         if password == "":
@@ -21,7 +21,7 @@ def main(email: str, password: Optional[str], headless: bool, start: int, end: i
             exit(1)
 
     browser = setup_scraping(headless, email, password)
-    orders: List = get_orders(browser, start, end)
+    orders: List = get_orders(browser, start, end, extensive)
 
     file_handler.save_file('orders.json', json.dumps([order.to_dict() for order in orders]))
 
@@ -48,7 +48,7 @@ def setup_scraping(headless, email, password):
     return browser
 
 
-def get_orders(browser: WebDriver, start_year: int, end_year: int) -> List[Order]:
+def get_orders(browser: WebDriver, start_year: int, end_year: int, extensive: bool) -> List[Order]:
     """
         get a list of all orders in the given range (start and end year inclusive)
         to save network capacities it is checked if some orders got already fetched earlier in 'orders.json'
@@ -56,6 +56,7 @@ def get_orders(browser: WebDriver, start_year: int, end_year: int) -> List[Order
         :param browser is a WebDriver pointing to the orders page and having the user logged in already
         :param start_year the year to start with (included)
         :param end_year the year to end with (included)
+        :param extensive - if set each items page is opened to scrape its categorization
         """
     orders: List[Order] = []
     last_date: datetime.datetime = datetime.datetime(year=start_year, month=1, day=1)
@@ -69,7 +70,7 @@ def get_orders(browser: WebDriver, start_year: int, end_year: int) -> List[Order
         orders = sorted(orders, key=lambda order: order.date)
         last_date = orders[-1].date
 
-        scraped_orders: List[Order] = scrape_orders(browser, last_date, end_date)
+        scraped_orders: List[Order] = scrape_orders(browser, last_date, end_date, extensive)
 
         # check for intersection of fetched orders
         existing_order_ids = list(map(lambda order: order.order_id, orders))
@@ -77,13 +78,13 @@ def get_orders(browser: WebDriver, start_year: int, end_year: int) -> List[Order
         orders.extend(new_orders)
 
     else:
-        orders = scrape_orders(browser, last_date, end_date)
+        orders = scrape_orders(browser, last_date, end_date, extensive)
 
     orders = sorted(orders, key=lambda order: order.date)
     return orders
 
 
-def scrape_orders(browser: WebDriver, start_date: datetime.datetime, end_date: datetime.datetime) -> List[Order]:
+def scrape_orders(browser: WebDriver, start_date: datetime.datetime, end_date: datetime.datetime, extensive: bool) -> List[Order]:
     """ returns list of all orders in between given start year (inclusive) and end year (inclusive) """
     start_year: int = start_date.year
     end_year: int = end_date.year
@@ -111,7 +112,7 @@ def scrape_orders(browser: WebDriver, start_date: datetime.datetime, end_date: d
         pages_remaining = are_orders_for_year_available(browser)
         while pages_remaining:
 
-            orders_on_page: List[Order] = scrape_page_for_orders(browser)
+            orders_on_page: List[Order] = scrape_page_for_orders(browser, extensive)
             orders.extend(orders_on_page)
 
             if start_date > orders_on_page[-1].date:
@@ -133,7 +134,7 @@ def scrape_orders(browser: WebDriver, start_date: datetime.datetime, end_date: d
     return orders
 
 
-def scrape_page_for_orders(browser: WebDriver) -> List[Order]:
+def scrape_page_for_orders(browser: WebDriver, extensive: bool) -> List[Order]:
     """ get a list of all orders found on the currently open page """
     orders = []
     for order_element in browser.find_elements_by_class_name('order'):
@@ -151,8 +152,12 @@ def scrape_page_for_orders(browser: WebDriver) -> List[Order]:
                 title, link = get_item_title(item_element)
                 item_price = order_price if is_digital_order(order_id) else \
                     get_item_price(item_element, order_element, browser)
+                print(extensive)
+                categories = get_item_categories(link, browser) if extensive else dict()
+                print(categories)
 
-                items.append(Item(item_price, link, title, seller))
+                items.append(Item(item_price, link, title, seller, categories))
+
         orders.append(Order(order_id, order_price, date, items))
 
     return orders
@@ -241,6 +246,31 @@ def get_item_price_through_details_page(order_element: WebElement, browser: WebD
 
     finally:
         return item_price
+
+
+def get_item_categories(item_link: str, browser: WebDriver) -> Dict[int, str]:
+    categories = dict()
+
+    browser.execute_script(f'''window.open("{item_link}","_blank");''')
+    browser.switch_to.window(browser.window_handles[1])
+
+    if not utils.wait_for_element_by_id(browser, 'wayfinding-breadcrumbs_container'):
+        browser.close()
+        browser.switch_to.window(browser.window_handles[0])
+        return categories
+
+    categories_element = browser.find_element_by_id('wayfinding-breadcrumbs_container')
+    for index, category_element in enumerate(categories_element.find_elements_by_class_name("a-list-item")):
+        element_is_separator = index % 2 == 1
+        if element_is_separator:
+            continue
+        depth = index // 2 + 1
+        categories[depth] = category_element.text
+
+    browser.close()
+    browser.switch_to.window(browser.window_handles[0])
+
+    return categories
 
 
 def navigate_to_orders_page(browser: WebDriver):

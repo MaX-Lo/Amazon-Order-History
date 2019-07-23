@@ -33,12 +33,14 @@ def serialize_date(obj) -> str:
 
 
 def wait_for_element_by_class_name(browser: WebDriver, class_name: str, timeout: float = 5) -> bool:
-    """ wait the specified timout for a element to load """
+    """ wait the specified timout for a element to load
+        :returns true if element was found
+    """
     try:
         WebDriverWait(browser, timeout).until(ec.presence_of_element_located((By.CLASS_NAME, class_name)))
         return True
     except TimeoutException:
-        print(f'Loading took too much time! (>{timeout}sec)')
+        print(f'Skipping, loading took too much time! (>{timeout}sec)')
         return False
 
 
@@ -48,7 +50,7 @@ def wait_for_element_by_id(browser: WebDriver, order_id: object, timeout: object
         WebDriverWait(browser, timeout).until(ec.presence_of_element_located((By.ID, order_id)))
         return True
     except TimeoutException:
-        print(f'Loading took too much time! (>{timeout}sec)')
+        print(f'Skipping, loading took too much time! (>{timeout}sec)')
         return False
 
 

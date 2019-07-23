@@ -24,8 +24,10 @@ def dash():
 @click.option("--start", default=2010, help="the year to start with. If not set 2010 is used.")
 @click.option("--end", default=datetime.datetime.now().year,
               help="the year to end with. If not set the current year is used.")
-def scrape(email: str, password: Optional[str], headless: bool, start: int, end: int):
-    scraping.main(email, password, headless, start, end)
+@click.option("--extensive", default=False,
+              help="if set to False categorization for items isn't available, but scraping itself should be faster")
+def scrape(email: str, password: Optional[str], headless: bool, start: int, end: int, extensive: bool):
+    scraping.main(email, password, headless, start, end, extensive)
 
 
 if __name__ == '__main__':

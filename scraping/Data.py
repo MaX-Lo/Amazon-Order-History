@@ -13,6 +13,8 @@ class Item:
     link: str
     title: str
     seller: str
+    # category depth as key and name as value, e.g. [0: Bekleidung, 1: Herren, 2: Tops,T-Shirts & Hemden, 3: T-Shirts]
+    category: Dict[int, str]
 
     def to_dict(self) -> Dict:
         return self.__dict__
@@ -20,7 +22,7 @@ class Item:
     @staticmethod
     def from_dict(item_dict: Dict) -> 'Item':
         """ returns an item object for a given order as dict """
-        return Item(item_dict['price'], item_dict['link'], item_dict['title'], item_dict['seller'])
+        return Item(item_dict['price'], item_dict['link'], item_dict['title'], item_dict['seller'], item_dict['category'])
 
 
 @dataclass
