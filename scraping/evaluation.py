@@ -1,135 +1,148 @@
-import os
-from functools import reduce
+import datetime
 
-import json
 from typing import List, Dict
 
-import numpy as np
-import matplotlib.pyplot as plt
-
-from scraping import utils
-from scraping.Data import Order
+from .Data import Order
 
 
-def main():
-    print(os.path.abspath('../orders.jons'))
-    if os.path.exists('../orders.json'):
-        with open('../orders.json') as file:
-            data = json.load(file)
-    else:
-        print("orders.json not found")
-        return
+class Evaluation:
+    def __init__(self, orders: List[Order]):
+        self.orders = orders
 
-    if not data:
-        return
+    def get_most_expensive_order(self) -> List[Order]:
+        """ get a list with the most expensive order, contains usually only one element """
+        max_order_price = max(map(lambda order: order.price, self.orders))
+        return list(filter(lambda order: order.price == max_order_price, self.orders))
 
-    orders = []
-    for order_dict in data:
-        orders.append(Order.from_dict(order_dict))
+    def get_orders_with_most_items(self) -> List[Order]:
+        max_item_count = max([len(order.items) for order in self.orders])
+        return list(filter(lambda order: len(order.items) == max_item_count, self.orders))
 
-    print(f'counted {get_order_count(orders)} orders with a total price of {get_total(orders)} Euro')
-    print(f'most expensive order was: {get_most_expensive_order(orders)}')
-    print(f'audible total: {get_audible_total(orders)}')
+    def get_order_count(self) -> int:
+        return len(self.orders)
 
-    #plot_expenses_by_year(orders)
-    plot_audible_by_month(orders)
-    plot_all(orders)
+    def get_item_count(self) -> int:
+        return sum([len(order.items) for order in self.orders])
 
+    def get_total(self):
+        total = sum([order.price for order in self.orders])
+        return round(total, 2)
 
-def plot_all(orders: List[Order]):
-    amazon_totals_by_year = utils.sort_dict_by_key(get_total_by_year(orders))
-    years = tuple(amazon_totals_by_year.keys())
-    bar_amount = np.arange(len(years))
+    def get_audible_total(self) -> float:
+        total = sum(self.audible_total_by_year().values())
+        return round(total, 2)
 
-    audible_totals_by_year = get_audible_total_by_year(orders)
-    for year in amazon_totals_by_year.keys():
-        if year not in audible_totals_by_year.keys():
-            audible_totals_by_year[year] = 0
-    audible_totals_by_year = utils.sort_dict_by_key(audible_totals_by_year)
+    def get_instant_video_total(self) -> float:
+        total = sum(self.instant_video_total_per_year().values())
+        return round(total, 2)
 
-    amazon_plot = plt.bar(bar_amount, list(amazon_totals_by_year.values()), align='center', alpha=0.5)
-    audible_plot = plt.bar(bar_amount, list(audible_totals_by_year.values()), align='center', alpha=0.5)
+    @staticmethod
+    def order_contains_audible_items(order: Order) -> bool:
+        for item in order.items:
+            if item.seller == 'Audible GmbH':
+                return True
+        return False
 
-    plt.ylabel('Amount in Euro')
-    plt.xlabel('Year')
-    plt.xticks(bar_amount, years)
-    plt.legend((amazon_plot[0], audible_plot[0]), ('Amazon Purchases', 'Audible Purchases'))
+    @staticmethod
+    def order_contains_instant_video_items(order: Order) -> bool:
+        for item in order.items:
+            if item.seller == 'Amazon Instant Video Germany GmbH':
+                return True
+        return False
 
-    plt.show()
+    @staticmethod
+    def order_contains_balance_item(order: Order) -> bool:
+        for item in order.items:
+            if item.title == "Amazon-Konto aufladen":
+                return True
+        return False
 
+    def total_by_year(self) -> Dict[int, float]:
+        totals = dict()
+        for order in self.orders:
+            if order.date.year not in totals:
+                totals[order.date.year] = 0
+            totals[order.date.year] += order.price
+        totals = {year: round(total, 2) for year, total in totals.items()}
+        return totals
 
-def plot_expenses_by_year(orders: List[Order]):
-    totals_by_year = get_total_by_year(orders)
-    objects = tuple(totals_by_year.keys())
-    y_pos = np.arange(len(objects))
+    def audible_total_by_year(self) -> Dict[int, float]:
+        audible_orders = [order for order in self.orders if self.order_contains_audible_items(order)]
+        totals = {}
+        for order in audible_orders:
+            if order.date.year not in totals.keys():
+                totals[order.date.year] = 0
+            totals[order.date.year] += order.price
+        totals = {year: round(total, 2) for year, total in totals.items()}
 
-    plt.bar(y_pos, list(totals_by_year.values()), align='center', alpha=0.5)
-    plt.xticks(y_pos, objects)
-    plt.ylabel('Amount in Euro')
-    plt.xlabel('Year')
-    plt.title('Amazon Purchases')
+        return totals
 
-    plt.show()
+    def instant_video_total_per_year(self) -> Dict[int, float]:
+        instant_video_orders = [order for order in self.orders if self.order_contains_instant_video_items(order)]
+        totals = {}
+        for order in instant_video_orders:
+            if order.date.year not in totals.keys():
+                totals[order.date.year] = 0
+            totals[order.date.year] += order.price
+        totals = {year: round(total, 2) for year, total in totals.items()}
 
+        return totals
 
-def plot_audible_by_month(orders: List[Order]):
-    totals_by_year = get_audible_total_by_year(orders)
-    objects = tuple(totals_by_year.keys())
-    y_pos = np.arange(len(objects))
+    def added_balance_per_year(self) -> Dict[int, float]:
+        balance_orders = [order for order in self.orders if self.order_contains_balance_item(order)]
 
-    plt.bar(y_pos, list(totals_by_year.values()), align='center', alpha=0.5)
-    plt.xticks(y_pos, objects)
-    plt.ylabel('Amount in Euro')
-    plt.xlabel('Year')
-    plt.title('Audible Purchases')
+        totals = {}
+        for order in balance_orders:
+            if order.date.year not in totals.keys():
+                totals[order.date.year] = 0
+            totals[order.date.year] += order.price
+        totals = {year: round(total, 2) for year, total in totals.items()}
 
-    plt.show()
+        return totals
 
+    def uncategorized_totals_per_year(self) -> Dict[int, float]:
+        amazon = self.total_by_year()
+        audible = self.audible_total_by_year()
+        prime_vid = self.instant_video_total_per_year()
+        prime = self.prime_member_fee_by_year()
+        balance = self.added_balance_per_year()
 
-def get_total_by_year(orders: List[Order]) -> Dict[int, float]:
-    totals_by_year = dict()
-    for order in orders:
-        if order.date.year not in totals_by_year:
-            totals_by_year[order.date.year] = 0
-        totals_by_year[order.date.year] += order.price
-    return totals_by_year
+        remaining_totals = {}
+        for year in amazon.keys():
+            remaining = amazon[year]
+            remaining = remaining - audible[year] if year in audible.keys() else remaining
+            remaining = remaining - prime_vid[year] if year in prime_vid.keys() else remaining
+            remaining = remaining - prime[year] if year in prime.keys() else remaining
+            remaining = remaining - balance[year] if year in prime.keys() else remaining
+            remaining_totals[year] = remaining
+        return remaining_totals
 
+    def prime_member_fee_by_year(self) -> Dict[int, float]:
+        # ToDo
+        return {}
 
-def get_total(orders: List[Order]):
-    return reduce((lambda total, order: total + order.price), orders, 0)
+    def totals_by_month(self) -> Dict[datetime.date, float]:
+        totals = dict()
+        for order in self.orders:
+            key = datetime.datetime(year=order.date.year, month=order.date.month, day=1)
+            if key not in totals:
+                totals[key] = 0
+            totals[key] += order.price
+        totals = {date: round(total, 2) for date, total in totals.items()}
+        return totals
 
+    def trend_by_month(self) -> Dict[datetime.date, float]:
+        """ return a trend value calculated through the expenses average over the last 6 month """
+        totals = self.totals_by_month()
 
-def get_most_expensive_order(orders: List[Order]):
-    max_order_price = max(map(lambda order: order.price, orders))
-    return list(filter(lambda order: order.price == max_order_price, orders))
+        trends = dict()
+        last = [0.0] * 6
 
+        for date, total in totals.items():
+            last.pop(0)
+            last.append(total)
+            trend = sum(last) / len(last)
+            trends[date] = trend
 
-def get_order_count(orders: List[Order]):
-    return len(orders)
+        return trends
 
-
-def get_audible_total(orders: List[Order]):
-    audible_orders = filter(lambda order: order.order_id[:3] == 'D01', orders)
-    total = sum(map(lambda order: order.price, audible_orders))
-    return total
-
-
-def order_contains_audible_items(order: Order) -> bool:
-    for item in order.items:
-        if "Audible" in item.title:
-            return True
-    return False
-
-
-def get_audible_total_by_year(orders: List[Order]) -> Dict[int, float]:
-    audible_orders = [order for order in orders if order_contains_audible_items(order)]
-    orders_by_year = {}
-    for order in audible_orders:
-        if order.date.year not in orders_by_year.keys():
-            orders_by_year[order.date.year] = 0
-        orders_by_year[order.date.year] += order.price
-    return orders_by_year
-
-
-if __name__ == '__main__':
-    main()
