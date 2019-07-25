@@ -64,7 +64,11 @@ def get_orders(browser: WebDriver, start_year: int, end_year: int, extensive: bo
     end_date: datetime.datetime = datetime.datetime.now() if end_year == datetime.datetime.now().year else \
         datetime.datetime(year=end_year, month=12, day=31)
 
-    data = file_handler.read_json_file("orders.json")
+    if (start_year != 2010 or end_year != datetime.datetime.now().year) and file_handler.file_exists("orders.json"):
+        file_handler.remove_file("orders.json")
+    else:
+        data = file_handler.read_json_file("orders.json")
+
     if data:
         for order_dict in data:
             orders.append(Order.from_dict(order_dict))
@@ -101,11 +105,7 @@ def scrape_orders(browser: WebDriver, start_date: datetime.datetime, end_date: d
 
     for order_filter_index in range(start_index, end_index):
         # open the dropdown
-        if not wait_for_element_by_id(browser, 'a-autoid-1-announce'):
-            print('---------------------------------------------')
-            print(f'FAILED: {datetime.datetime.now().year + 2 - order_filter_index}')
-            print('---------------------------------------------')
-            continue
+        wait_for_element_by_id(browser, 'a-autoid-1-announce')
         browser.find_element_by_id('a-autoid-1-announce').click()
 
         # select and click on a order filter
@@ -149,8 +149,8 @@ def print_progress(start_year: int, end_year: int, current_year: int, orders_len
     time_passed = time.time() - scraping_start_time
     average_time_per_year = time_passed / already_scraped_years
     end_time = time.time() + average_time_per_year * years_ahead
-    aproximited_time_to_end = end_time - scraping_start_time
-    print_time = str(datetime.timedelta(seconds=aproximited_time_to_end))
+    approximated_time_to_end = end_time - scraping_start_time
+    print_time = str(datetime.timedelta(seconds=approximated_time_to_end))
 
     print(f'Finished {current_year} / {orders_percentage}%. Approximately finished in {print_time}')
 
@@ -303,6 +303,8 @@ def complete_sign_in_form(browser: WebDriver, email: str, password: str):
 
         password_input = browser.find_element_by_id('ap_password')
         password_input.send_keys(password)
+
+        browser.find_element_by_name('rememberMe').click()
 
         sign_in_input = browser.find_element_by_id('signInSubmit')
         sign_in_input.click()
