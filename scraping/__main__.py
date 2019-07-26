@@ -15,7 +15,7 @@ def main():
 def dash():
     dash_app.main()
 
-
+#@click.option("--password", required=False, default=None, hide_input=True, prompt=True, help="the users password")
 @main.command()
 @click.option("--email", required=True, help="The users email address")
 @click.option("--password", required=False, default=None, help="the users password")

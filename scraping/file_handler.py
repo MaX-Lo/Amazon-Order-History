@@ -5,6 +5,24 @@ from typing import List
 from .Data import Order
 
 
+def file_exists(file_name: str) -> bool:
+    package_directory = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(package_directory, '..', file_name)
+    return os.path.isfile(path)
+
+
+def remove_file(file_name: str) -> bool:
+    package_directory = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(package_directory, '..', file_name)
+    if os.path.isfile(path):
+        os.remove(path)
+        print(f"{file_name} removed")
+        return True
+    else:
+        print(f"Failed to remove {file_name}")
+        return False
+
+
 def load_orders(file_name: str = 'orders.json') -> List[Order]:
     file = _read_file(file_name)
     if file:
