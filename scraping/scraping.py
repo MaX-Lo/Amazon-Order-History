@@ -253,7 +253,7 @@ def get_item_price_through_details_page(order_element: WebElement, browser: WebD
         order_price_details = order_price_details.text.split("Summe:")[1]
         order_price_details = order_price_details.split(" ")[1]
 
-        item_price = order_price_details.split("\n")[0]
+        item_price = float(order_price_details.split("\n")[0])
 
         browser.close()
         browser.switch_to.window(browser.window_handles[0])

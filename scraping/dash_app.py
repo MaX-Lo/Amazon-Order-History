@@ -40,6 +40,10 @@ def main():
             html.Div(
                 gen_scatter_by_month_graph(eval),
                 className="row flex-display"
+            ),
+            html.Div(
+                gen_one_bar_graph(eval),
+                className="row flex-display"
             )
         ],
         id="mainContainer"
@@ -125,7 +129,7 @@ def gen_stacked_totals_graph(eval: Evaluation) -> html.Div:
         barmode='stack',
         yaxis=dict(title='Price in €', titlefont_size=18, tickfont_size=16),
         xaxis=dict(title='Year', titlefont_size=18, tickfont_size=16),
-        legend=dict(x=1.0, y=1.0, font_size=16, bgcolor='rgba(255, 255, 255, 0)'),
+        legend=dict(font_size=16, bgcolor='rgba(255, 255, 255, 0)'),
         height=600,
         title="Amazon totals by year, split by categories",
         titlefont={"size": 20}
@@ -151,13 +155,42 @@ def gen_scatter_by_month_graph(eval: Evaluation) -> html.Div:
     fig.update_layout(
         yaxis=dict(title='Price in €', titlefont_size=18, tickfont_size=16),
         xaxis=dict(titlefont_size=18, tickfont_size=16),
-        legend=dict(x=1.0, y=1.0, font_size=16, bgcolor='rgba(255, 255, 255, 0)'),
+        legend=dict(font_size=16, bgcolor='rgba(255, 255, 255, 0)'),
         title="Amazon totals by month",
         titlefont={"size": 20}
     )
 
     return html.Div(
         dcc.Graph(id='scatter-graph', figure=fig),
+        className="pretty_container twelve columns"
+    )
+
+
+def gen_one_bar_graph(eval: Evaluation) -> html.Div:
+
+    category_sums = eval.total_by_level_1_category()
+    total = sum(category_sums.values())
+    percentages = {category[0]: category[1] / total * 100 for category in category_sums.items()}
+    print(percentages)
+    data = [go.Bar(name=category[0], x=[category[1]], y=[1], orientation='h') for category in percentages.items()]
+
+    fig = go.Figure(
+        data=data,
+        layout = copy.deepcopy(layout)
+    )
+
+    fig.update_layout(
+        barmode='stack',
+        yaxis=dict(tickfont_size=16, showticklabels=False),
+        xaxis=dict(tickfont_size=16, ticksuffix="%"),
+        legend=dict(font_size=16, bgcolor='rgba(255, 255, 255, 0)'),
+        # height=600,
+        title="Totals split by level 1 categories",
+        titlefont={"size": 20,},
+    )
+
+    return html.Div(
+        dcc.Graph(id='bar-graph', figure=fig),
         className="pretty_container twelve columns"
     )
 

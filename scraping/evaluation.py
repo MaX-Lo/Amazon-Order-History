@@ -146,3 +146,19 @@ class Evaluation:
 
         return trends
 
+    def total_by_level_1_category(self) -> Dict[str, float]:
+        category_sums = dict()
+        category_sums['none'] = 0
+
+        for order in self.orders:
+            for item in order.items:
+
+                if not item.category or len(item.category.items()) == 0:
+                    category_sums['none'] += item.price
+                    continue
+
+                if item.category['1'] not in category_sums.keys():
+                    category_sums[item.category['1']] = 0
+                category_sums[item.category['1']] = category_sums[item.category['1']] + item.price
+
+        return category_sums

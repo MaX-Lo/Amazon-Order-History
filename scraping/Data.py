@@ -28,7 +28,8 @@ class Item:
 @dataclass
 class Order:
     order_id: str
-    price: float
+    price: float  # overall costs
+    # shipment: float  # total shipment cost
     date: datetime.datetime
     items: List[Item]
 
