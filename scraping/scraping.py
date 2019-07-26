@@ -9,7 +9,7 @@ from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 
-from . import utils, file_handler
+from . import file_handler
 from .Data import Order, Item
 from .utils import wait_for_element_by_class_name, wait_for_element_by_id
 
@@ -273,11 +273,32 @@ def get_item_categories(item_link: str, browser: WebDriver) -> Dict[int, str]:
     browser.execute_script(f'''window.open("{item_link}","_blank");''')
     browser.switch_to.window(browser.window_handles[1])
 
+
+    if utils.wait_for_element_by_id(browser, 'wayfinding-breadcrumbs_container'):
+        categories = get_item_categories_from_normal(browser)
+        browser.close()
+        browser.switch_to.window(browser.window_handles[0])
+        return categories
+
+    elif utils.wait_for_element_by_class_name(browser, 'dv-dp-node-meta-info'):
+        categories = get_item_categories_from_video(browser)
+        browser.close()
+        browser.switch_to.window(browser.window_handles[0])
+        return categories
+
     if not utils.wait_for_element_by_id(browser, 'wayfinding-breadcrumbs_container'):
         browser.close()
         browser.switch_to.window(browser.window_handles[0])
         return categories
 
+    browser.close()
+    browser.switch_to.window(browser.window_handles[0])
+
+    return categories
+
+
+def get_item_categories_from_normal(browser: WebDriver):
+    categories = dict()
     categories_element = browser.find_element_by_id('wayfinding-breadcrumbs_container')
     for index, category_element in enumerate(categories_element.find_elements_by_class_name("a-list-item")):
         element_is_separator = index % 2 == 1
@@ -286,9 +307,19 @@ def get_item_categories(item_link: str, browser: WebDriver) -> Dict[int, str]:
         depth = index // 2 + 1
         categories[depth] = category_element.text
 
-    browser.close()
-    browser.switch_to.window(browser.window_handles[0])
+    return categories
 
+
+def get_item_categories_from_video(browser: WebDriver):
+    categories = dict()
+    text: str = browser.find_element_by_class_name('dv-dp-node-meta-info').text
+    genre = text.split("\n")[0]
+    genre_list: List[str] = genre.split(", ")
+    genre_list[0] = genre_list[0].split(" ")[1]
+    for genre_ind in len(range(genre_list)):
+        categories[genre_ind] = genre_list[genre_ind]
+
+    categories[len(genre_list)] = 'movie'
     return categories
 
 
