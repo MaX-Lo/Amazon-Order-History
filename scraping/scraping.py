@@ -11,7 +11,7 @@ from selenium.webdriver.remote.webelement import WebElement
 
 from . import file_handler
 from .Data import Order, Item
-from .utils import wait_for_element_by_class_name, wait_for_element_by_id
+from .utils import wait_for_element_by_class_name, wait_for_element_by_id, str_to_datetime
 
 
 def main(email: str, password: Optional[str], headless: bool, start: int, end: int, extensive: bool):
@@ -89,7 +89,8 @@ def get_orders(browser: WebDriver, start_year: int, end_year: int, extensive: bo
     return orders
 
 
-def scrape_orders(browser: WebDriver, start_date: datetime.datetime, end_date: datetime.datetime, extensive: bool) -> List[Order]:
+def scrape_orders(browser: WebDriver, start_date: datetime.datetime, end_date: datetime.datetime, extensive: bool) -> \
+List[Order]:
     """ returns list of all orders in between given start year (inclusive) and end year (inclusive) """
     start_year: int = start_date.year
     end_year: int = end_date.year
@@ -133,7 +134,7 @@ def scrape_orders(browser: WebDriver, start_date: datetime.datetime, end_date: d
                     .find_element_by_css_selector('a').get_attribute('href')
                 browser.get(next_page_link)
         current_year = datetime.datetime.now().year + 2 - order_filter_index
-        print_progress(start_year,end_year, current_year, len(orders), start_time)
+        print_progress(start_year, end_year, current_year, len(orders), start_time)
 
     return orders
 
@@ -203,7 +204,7 @@ def get_order_info(order_info_element: WebElement) -> Tuple[str, float, datetime
         order_price = 0
 
     date_str = order_info_list[0]
-    date = utils.str_to_datetime(date_str)
+    date = str_to_datetime(date_str)
     return order_id, order_price, date
 
 
@@ -273,20 +274,14 @@ def get_item_categories(item_link: str, browser: WebDriver) -> Dict[int, str]:
     browser.execute_script(f'''window.open("{item_link}","_blank");''')
     browser.switch_to.window(browser.window_handles[1])
 
-
-    if utils.wait_for_element_by_id(browser, 'wayfinding-breadcrumbs_container'):
+    if wait_for_element_by_id(browser, 'wayfinding-breadcrumbs_container'):
         categories = get_item_categories_from_normal(browser)
         browser.close()
         browser.switch_to.window(browser.window_handles[0])
         return categories
 
-    elif utils.wait_for_element_by_class_name(browser, 'dv-dp-node-meta-info'):
+    elif wait_for_element_by_class_name(browser, 'dv-dp-node-meta-info'):
         categories = get_item_categories_from_video(browser)
-        browser.close()
-        browser.switch_to.window(browser.window_handles[0])
-        return categories
-
-    if not utils.wait_for_element_by_id(browser, 'wayfinding-breadcrumbs_container'):
         browser.close()
         browser.switch_to.window(browser.window_handles[0])
         return categories
@@ -306,7 +301,6 @@ def get_item_categories_from_normal(browser: WebDriver):
             continue
         depth = index // 2 + 1
         categories[depth] = category_element.text
-
     return categories
 
 
@@ -316,7 +310,7 @@ def get_item_categories_from_video(browser: WebDriver):
     genre = text.split("\n")[0]
     genre_list: List[str] = genre.split(", ")
     genre_list[0] = genre_list[0].split(" ")[1]
-    for genre_ind in len(range(genre_list)):
+    for genre_ind in range(len(genre_list)):
         categories[genre_ind] = genre_list[genre_ind]
 
     categories[len(genre_list)] = 'movie'
