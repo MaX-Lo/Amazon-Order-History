@@ -11,7 +11,7 @@ from selenium.webdriver.remote.webelement import WebElement
 
 from . import file_handler
 from .Data import Order, Item
-from .utils import wait_for_element_by_class_name, wait_for_element_by_id, str_to_datetime
+from . import utils as ut
 
 
 def main(email: str, password: Optional[str], headless: bool, start: int, end: int, extensive: bool):
@@ -66,6 +66,7 @@ def get_orders(browser: WebDriver, start_year: int, end_year: int, extensive: bo
 
     if (start_year != 2010 or end_year != datetime.datetime.now().year) and file_handler.file_exists("orders.json"):
         file_handler.remove_file("orders.json")
+        data = None
     else:
         data = file_handler.read_json_file("orders.json")
 
@@ -89,9 +90,14 @@ def get_orders(browser: WebDriver, start_year: int, end_year: int, extensive: bo
     return orders
 
 
-def scrape_orders(browser: WebDriver, start_date: datetime.datetime, end_date: datetime.datetime, extensive: bool) -> \
-List[Order]:
-    """ returns list of all orders in between given start year (inclusive) and end year (inclusive) """
+def scrape_orders(
+        browser: WebDriver,
+        start_date: datetime.datetime,
+        end_date: datetime.datetime,
+        extensive: bool) -> List[Order]:
+    """
+    returns a list of all orders in between given start year (inclusive) and end year (inclusive)
+    """
     start_year: int = start_date.year
     end_year: int = end_date.year
     assert start_year <= end_year, "start year must be before end year"
@@ -106,12 +112,12 @@ List[Order]:
 
     for order_filter_index in range(start_index, end_index):
         # open the dropdown
-        wait_for_element_by_id(browser, 'a-autoid-1-announce')
+        ut.wait_for_element_by_id(browser, 'a-autoid-1-announce')
         browser.find_element_by_id('a-autoid-1-announce').click()
 
         # select and click on a order filter
         id_order_filter = f'orderFilter_{order_filter_index}'
-        wait_for_element_by_id(browser, id_order_filter)
+        ut.wait_for_element_by_id(browser, id_order_filter)
         dropdown_element = browser.find_element_by_id(id_order_filter)
         dropdown_element.click()
 
@@ -161,7 +167,7 @@ def scrape_page_for_orders(browser: WebDriver, extensive: bool) -> List[Order]:
     orders = []
     for order_element in browser.find_elements_by_class_name('order'):
 
-        wait_for_element_by_class_name(order_element, 'order-info', timeout=3)
+        ut.wait_for_element_by_class_name(order_element, 'order-info', timeout=3)
         order_info_element = order_element.find_element_by_class_name('order-info')
         order_id, order_price, date = get_order_info(order_info_element)
 
@@ -169,11 +175,12 @@ def scrape_page_for_orders(browser: WebDriver, extensive: bool) -> List[Order]:
         # looking in an order there is a 'a-box' for order_info and and 'a-box' for each seller containing detailed
         # items info
         for items_by_seller in order_element.find_elements_by_class_name('a-box')[1:]:
-            for item_element in items_by_seller.find_elements_by_class_name('a-fixed-left-grid'):
+
+            for index, item_element in enumerate(items_by_seller.find_elements_by_class_name('a-fixed-left-grid')):
                 seller = get_item_seller(item_element)
                 title, link = get_item_title(item_element)
                 item_price = order_price if is_digital_order(order_id) else \
-                    get_item_price(item_element, order_element, browser)
+                    get_item_price(item_element, index, order_element, browser)
                 categories = get_item_categories(link, browser) if extensive else dict()
 
                 items.append(Item(item_price, link, title, seller, categories))
@@ -204,7 +211,7 @@ def get_order_info(order_info_element: WebElement) -> Tuple[str, float, datetime
         order_price = 0
 
     date_str = order_info_list[0]
-    date = str_to_datetime(date_str)
+    date = ut.str_to_datetime(date_str)
     return order_id, order_price, date
 
 
@@ -230,41 +237,39 @@ def get_item_title(item_element) -> (str, str):
     return title, link
 
 
-def get_item_price(item_element: WebElement, order_element: WebElement, browser: WebDriver) -> float:
+def get_item_price(item_element: WebElement, item_index: int, order_element: WebElement, browser: WebDriver) -> float:
     try:
         item_price_str = item_element.find_element_by_class_name('a-color-price').text
         item_price = price_str_to_float(item_price_str)
     except (NoSuchElementException, ValueError) as e:
-        item_price = get_item_price_through_details_page(order_element, browser)
+        item_price = get_item_price_through_details_page(order_element, item_index, browser)
 
     return item_price
 
 
-def get_item_price_through_details_page(order_element: WebElement, browser: WebDriver) -> float:
+def get_item_price_through_details_page(order_element: WebElement, item_index: int, browser: WebDriver) -> float:
     item_price = 0
+
     try:
         order_details_link = order_element.find_element_by_class_name('a-link-normal').get_attribute('href')
 
         browser.execute_script(f'''window.open("{order_details_link}","_blank");''')
         browser.switch_to.window(browser.window_handles[1])
-        wait_for_element_by_id(browser, 'od-subtotals')
+        if not ut.wait_for_element_by_class_name(browser, 'od-shipments'):
+            return item_price
 
-        order_price_details = browser.find_element_by_id('od-subtotals')
-        order_price_details = order_price_details.text.split("Summe:")[1]
-        order_price_details = order_price_details.split(" ")[1]
-
-        item_price = float(order_price_details.split("\n")[0])
-
-        browser.close()
-        browser.switch_to.window(browser.window_handles[0])
+        od_shipments_element = browser.find_element_by_class_name('od-shipments')
+        price_fields: List[WebElement] = od_shipments_element.find_elements_by_class_name('a-color-price')
+        print([price_str_to_float(price.text) for price in price_fields])
+        item_price: float = price_str_to_float(price_fields[item_index].text)
 
     except (NoSuchElementException, ValueError) as e:
         item_price = 0
-        browser.close()
-        browser.switch_to.window(browser.window_handles[0])
         print(f'Could not parse price for order:\n{order_element.text}')
 
     finally:
+        browser.close()
+        browser.switch_to.window(browser.window_handles[0])
         return item_price
 
 
@@ -274,13 +279,13 @@ def get_item_categories(item_link: str, browser: WebDriver) -> Dict[int, str]:
     browser.execute_script(f'''window.open("{item_link}","_blank");''')
     browser.switch_to.window(browser.window_handles[1])
 
-    if wait_for_element_by_id(browser, 'wayfinding-breadcrumbs_container'):
+    if ut.wait_for_element_by_id(browser, 'wayfinding-breadcrumbs_container'):
         categories = get_item_categories_from_normal(browser)
         browser.close()
         browser.switch_to.window(browser.window_handles[0])
         return categories
 
-    elif wait_for_element_by_class_name(browser, 'dv-dp-node-meta-info'):
+    elif ut.wait_for_element_by_class_name(browser, 'dv-dp-node-meta-info'):
         categories = get_item_categories_from_video(browser)
         browser.close()
         browser.switch_to.window(browser.window_handles[0])
