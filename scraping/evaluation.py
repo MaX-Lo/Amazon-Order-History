@@ -1,11 +1,18 @@
+"""
+Contains an Evaluation class which provides methods to analyse a given list of Orders
+"""
+
 import datetime
 
 from typing import List, Dict
 
-from .Data import Order
+from .data import Order
 
 
 class Evaluation:
+    """
+    class providing methods to analyze a list of Orders
+    """
     def __init__(self, orders: List[Order]):
         self.orders = orders
 
@@ -58,7 +65,7 @@ class Evaluation:
         return False
 
     def total_by_year(self) -> Dict[int, float]:
-        totals = dict()
+        totals: Dict[int, float] = dict()
         for order in self.orders:
             if order.date.year not in totals:
                 totals[order.date.year] = 0
@@ -68,36 +75,24 @@ class Evaluation:
 
     def audible_total_by_year(self) -> Dict[int, float]:
         audible_orders = [order for order in self.orders if self.order_contains_audible_items(order)]
-        totals = {}
-        for order in audible_orders:
-            if order.date.year not in totals.keys():
-                totals[order.date.year] = 0
-            totals[order.date.year] += order.price
-        totals = {year: round(total, 2) for year, total in totals.items()}
-
-        return totals
+        return self.__total_by_year(audible_orders)
 
     def instant_video_total_per_year(self) -> Dict[int, float]:
         instant_video_orders = [order for order in self.orders if self.order_contains_instant_video_items(order)]
-        totals = {}
-        for order in instant_video_orders:
-            if order.date.year not in totals.keys():
-                totals[order.date.year] = 0
-            totals[order.date.year] += order.price
-        totals = {year: round(total, 2) for year, total in totals.items()}
-
-        return totals
+        return self.__total_by_year(instant_video_orders)
 
     def added_balance_per_year(self) -> Dict[int, float]:
         balance_orders = [order for order in self.orders if self.order_contains_balance_item(order)]
+        return self.__total_by_year(balance_orders)
 
-        totals = {}
-        for order in balance_orders:
+    @staticmethod
+    def __total_by_year(orders: List[Order]) -> Dict[int, float]:
+        totals: Dict[int, float] = dict()
+        for order in orders:
             if order.date.year not in totals.keys():
                 totals[order.date.year] = 0
             totals[order.date.year] += order.price
         totals = {year: round(total, 2) for year, total in totals.items()}
-
         return totals
 
     def uncategorized_totals_per_year(self) -> Dict[int, float]:
@@ -117,14 +112,15 @@ class Evaluation:
             remaining_totals[year] = remaining
         return remaining_totals
 
-    def prime_member_fee_by_year(self) -> Dict[int, float]:
+    @staticmethod
+    def prime_member_fee_by_year() -> Dict[int, float]:
         # ToDo
         return {}
 
     def totals_by_month(self) -> Dict[datetime.date, float]:
-        totals = dict()
+        totals: Dict[datetime.date, float] = dict()
         for order in self.orders:
-            key = datetime.datetime(year=order.date.year, month=order.date.month, day=1)
+            key = datetime.date(year=order.date.year, month=order.date.month, day=1)
             if key not in totals:
                 totals[key] = 0
             totals[key] += order.price
@@ -147,18 +143,18 @@ class Evaluation:
         return trends
 
     def total_by_level_1_category(self) -> Dict[str, float]:
-        category_sums = dict()
+        category_sums: Dict[str, float] = dict()
         category_sums['none'] = 0
 
         for order in self.orders:
             for item in order.items:
 
-                if not item.category or len(item.category.items()) == 0:
+                if not item.category:
                     category_sums['none'] += item.price
                     continue
 
-                if item.category['1'] not in category_sums.keys():
-                    category_sums[item.category['1']] = 0
-                category_sums[item.category['1']] = category_sums[item.category['1']] + item.price
+                if item.category[1] not in category_sums.keys():
+                    category_sums[item.category[1]] = 0
+                category_sums[item.category[1]] = category_sums[item.category[1]] + item.price
 
         return category_sums

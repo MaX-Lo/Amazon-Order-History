@@ -171,7 +171,7 @@ def gen_one_bar_graph(eval: Evaluation) -> html.Div:
     category_sums = eval.total_by_level_1_category()
     total = sum(category_sums.values())
     percentages = {category[0]: category[1] / total * 100 for category in category_sums.items()}
-    print(percentages)
+
     data = [go.Bar(name=category[0], x=[category[1]], y=[1], orientation='h') for category in percentages.items()]
 
     fig = go.Figure(

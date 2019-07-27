@@ -2,8 +2,11 @@ venv/
 .idea/
 .pytype/
 */__pycache__/
+.mypy_cache/
 geckodriver.log
-orders.json
+scraping/assets/orders.json
 pw.txt
 .pw.txt
 env
+orders.json
+

@@ -1,3 +1,7 @@
+"""
+downloads and parses the data from amazon.de to store it in a orders.json file
+"""
+
 import datetime
 import json
 from typing import List, Tuple, Optional, Dict
@@ -10,11 +14,15 @@ from selenium.webdriver.firefox.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 
 from . import file_handler
-from .Data import Order, Item
+from .data import Order, Item
 from . import utils as ut
 
 
+FILE_NAME = "orders.json"
+
+
 def main(email: str, password: Optional[str], headless: bool, start: int, end: int, extensive: bool):
+    """ function start starts scraping process and storing the result in a file """
     if password is None:
         password = file_handler.load_password()
         if password == "":
@@ -24,12 +32,17 @@ def main(email: str, password: Optional[str], headless: bool, start: int, end: i
     browser = setup_scraping(headless, email, password)
     orders: List = get_orders(browser, start, end, extensive)
 
-    file_handler.save_file('orders.json', json.dumps([order.to_dict() for order in orders]))
+    file_handler.save_file(FILE_NAME, json.dumps([order.to_dict() for order in orders]))
 
     browser.quit()
 
 
 def setup_scraping(headless, email, password):
+    """ prepares the WebDriver for scraping the data by:
+        - setting up the WebDrive
+        - log in the user with the given credentials
+        - skipping the adding phone number dialog (should it appear)
+    """
     fp = FirefoxProfile()
     fp.set_preference("browser.tabs.remote.autostart", False)
     fp.set_preference("browser.tabs.remote.autostart.1", False)
@@ -60,46 +73,61 @@ def get_orders(browser: WebDriver, start_year: int, end_year: int, extensive: bo
         :param extensive - if set each items page is opened to scrape its categorization
         """
     orders: List[Order] = []
-    last_date: datetime.datetime = datetime.datetime(year=start_year, month=1, day=1)
-    end_date: datetime.datetime = datetime.datetime.now() if end_year == datetime.datetime.now().year else \
-        datetime.datetime(year=end_year, month=12, day=31)
+    start_date: datetime.date = datetime.date(year=start_year, month=1, day=1)
+    end_date: datetime.date = datetime.datetime.now().date() if end_year == datetime.datetime.now().year else \
+        datetime.date(year=end_year, month=12, day=31)
 
-    if (start_year != 2010 or end_year != datetime.datetime.now().year) and file_handler.file_exists("orders.json"):
-        file_handler.remove_file("orders.json")
+    if is_custom_date_range(start_date, end_date):
+        file_handler.remove_file(FILE_NAME)
         data = None
     else:
-        data = file_handler.read_json_file("orders.json")
+        data = file_handler.read_json_file(FILE_NAME)
 
     if data:
         for order_dict in data:
             orders.append(Order.from_dict(order_dict))
-        orders = sorted(orders, key=lambda order: order.date)
-        last_date = orders[-1].date
-
-        scraped_orders: List[Order] = scrape_orders(browser, last_date, end_date, extensive)
-
-        # check for intersection of fetched orders
-        existing_order_ids = list(map(lambda order: order.order_id, orders))
-        new_orders: List[Order] = list(filter(lambda order: order.order_id not in existing_order_ids, scraped_orders))
-        orders.extend(new_orders)
-
+        orders = scrape_partial(orders, browser, start_date, extensive)
     else:
-        orders = scrape_orders(browser, last_date, end_date, extensive)
-
+        orders = scrape_complete(browser, start_date, end_date, extensive)
     orders = sorted(orders, key=lambda order: order.date)
+    return orders
+
+
+def is_custom_date_range(start: datetime.date, end: datetime.date) -> bool:
+    """ returns whether the maximum date range is used or a custom user set range """
+    return start.year != 2010 or end.year != datetime.datetime.now().year
+
+
+def scrape_complete(browser: WebDriver, start_date: datetime.date, end_date: datetime.date, extensive: bool) -> List[Order]:
+    """ scrapes all the data without checking for duplicates (when some orders already exist) """
+    return scrape_orders(browser, start_date, end_date, extensive)
+
+
+def scrape_partial(orders: List[Order], browser: WebDriver, end_date: datetime.date, extensive: bool):
+    """ scrape data until finding duplicates, at which point the scraping can be canceled since the rest
+     is already there """
+    orders = sorted(orders, key=lambda order: order.date)
+    last_date = orders[-1].date
+
+    scraped_orders: List[Order] = scrape_orders(browser, last_date, end_date, extensive)
+
+    # check for intersection of fetched orders
+    existing_order_ids = list(map(lambda order: order.order_id, orders))
+    new_orders: List[Order] = list(filter(lambda order: order.order_id not in existing_order_ids, scraped_orders))
+    orders.extend(new_orders)
     return orders
 
 
 def scrape_orders(
         browser: WebDriver,
-        start_date: datetime.datetime,
-        end_date: datetime.datetime,
+        start: datetime.date,
+        end: datetime.date,
         extensive: bool) -> List[Order]:
     """
     returns a list of all orders in between given start year (inclusive) and end year (inclusive)
     """
-    start_year: int = start_date.year
-    end_year: int = end_date.year
+    start_year: int = start.year
+    end_year: int = end.year
     assert start_year <= end_year, "start year must be before end year"
     assert start_year >= 2010, "Amazon order history works only for years after 2009"
     assert end_year <= datetime.datetime.now().year, "End year can not be in the future"
@@ -127,7 +155,7 @@ def scrape_orders(
             orders_on_page: List[Order] = scrape_page_for_orders(browser, extensive)
             orders.extend(orders_on_page)
 
-            if len(orders_on_page) > 0 and start_date > orders_on_page[-1].date:
+            if len(orders_on_page) > 0 and start > orders_on_page[-1].date:
                 break
             if is_paging_menu_available(browser):
                 pagination_element = browser.find_element_by_class_name('a-pagination')
@@ -190,7 +218,7 @@ def scrape_page_for_orders(browser: WebDriver, extensive: bool) -> List[Order]:
     return orders
 
 
-def get_order_info(order_info_element: WebElement) -> Tuple[str, float, datetime.datetime]:
+def get_order_info(order_info_element: WebElement) -> Tuple[str, float, datetime.date]:
     order_info_list: List[str] = [info_field.text for info_field in
                                   order_info_element.find_elements_by_class_name('value')]
 
@@ -204,14 +232,14 @@ def get_order_info(order_info_element: WebElement) -> Tuple[str, float, datetime
         order_id = order_info_list[3]
 
     # price is usually formatted as 'EUR x,xx' but special cases as 'Audible Guthaben' are possible as well
-    order_price = order_info_list[1]
-    if order_price.find('EUR') != -1:
-        order_price = price_str_to_float(order_price)
+    order_price_str = order_info_list[1]
+    if order_price_str.find('EUR') != -1:
+        order_price = price_str_to_float(order_price_str)
     else:
         order_price = 0
 
     date_str = order_info_list[0]
-    date = ut.str_to_datetime(date_str)
+    date = ut.str_to_date(date_str)
     return order_id, order_price, date
 
 
@@ -224,7 +252,7 @@ def get_item_seller(item_element) -> str:
         return 'not available'
 
 
-def get_item_title(item_element) -> (str, str):
+def get_item_title(item_element) -> Tuple[str, str]:
     item_elements = item_element.find_element_by_class_name('a-col-right') \
         .find_elements_by_class_name('a-row')
     item_title_element = item_elements[0]
@@ -241,14 +269,14 @@ def get_item_price(item_element: WebElement, item_index: int, order_element: Web
     try:
         item_price_str = item_element.find_element_by_class_name('a-color-price').text
         item_price = price_str_to_float(item_price_str)
-    except (NoSuchElementException, ValueError) as e:
+    except (NoSuchElementException, ValueError):
         item_price = get_item_price_through_details_page(order_element, item_index, browser)
 
     return item_price
 
 
 def get_item_price_through_details_page(order_element: WebElement, item_index: int, browser: WebDriver) -> float:
-    item_price = 0
+    item_price: float = 0
 
     try:
         order_details_link = order_element.find_element_by_class_name('a-link-normal').get_attribute('href')
@@ -261,9 +289,9 @@ def get_item_price_through_details_page(order_element: WebElement, item_index: i
         od_shipments_element = browser.find_element_by_class_name('od-shipments')
         price_fields: List[WebElement] = od_shipments_element.find_elements_by_class_name('a-color-price')
         print([price_str_to_float(price.text) for price in price_fields])
-        item_price: float = price_str_to_float(price_fields[item_index].text)
+        item_price = price_str_to_float(price_fields[item_index].text)
 
-    except (NoSuchElementException, ValueError) as e:
+    except (NoSuchElementException, ValueError):
         item_price = 0
         print(f'Could not parse price for order:\n{order_element.text}')
 
@@ -274,7 +302,7 @@ def get_item_price_through_details_page(order_element: WebElement, item_index: i
 
 
 def get_item_categories(item_link: str, browser: WebDriver) -> Dict[int, str]:
-    categories = dict()
+    categories: Dict[int, str] = dict()
 
     browser.execute_script(f'''window.open("{item_link}","_blank");''')
     browser.switch_to.window(browser.window_handles[1])
@@ -285,7 +313,7 @@ def get_item_categories(item_link: str, browser: WebDriver) -> Dict[int, str]:
         browser.switch_to.window(browser.window_handles[0])
         return categories
 
-    elif ut.wait_for_element_by_class_name(browser, 'dv-dp-node-meta-info'):
+    if ut.wait_for_element_by_class_name(browser, 'dv-dp-node-meta-info'):
         categories = get_item_categories_from_video(browser)
         browser.close()
         browser.switch_to.window(browser.window_handles[0])
@@ -304,7 +332,7 @@ def get_item_categories_from_normal(browser: WebDriver):
         element_is_separator = index % 2 == 1
         if element_is_separator:
             continue
-        depth = index // 2 + 1
+        depth = int(index // 2 + 1)
         categories[depth] = category_element.text
     return categories
 
@@ -315,8 +343,8 @@ def get_item_categories_from_video(browser: WebDriver):
     genre = text.split("\n")[0]
     genre_list: List[str] = genre.split(", ")
     genre_list[0] = genre_list[0].split(" ")[1]
-    for genre_ind in range(len(genre_list)):
-        categories[genre_ind] = genre_list[genre_ind]
+    for index, genre in enumerate(genre_list):
+        categories[index] = genre
 
     categories[len(genre_list)] = 'movie'
     return categories
@@ -327,6 +355,8 @@ def navigate_to_orders_page(browser: WebDriver):
 
 
 def complete_sign_in_form(browser: WebDriver, email: str, password: str):
+    """ searches for the sign in form enters the credentials and confirms
+        if successful amazon redirects the browser to the previous site """
     try:
         email_input = browser.find_element_by_id('ap_email')
         email_input.send_keys(email)

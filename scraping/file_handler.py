@@ -1,33 +1,30 @@
+"""
+contains file handling related methods
+"""
+
 import json
 import os
 from typing import List
 
-from .Data import Order
-
-
-def file_exists(file_name: str) -> bool:
-    package_directory = os.path.dirname(os.path.abspath(__file__))
-    path = os.path.join(package_directory, '..', file_name)
-    return os.path.isfile(path)
+from .data import Order
 
 
 def remove_file(file_name: str) -> bool:
+    """ removes a file with file_name """
     package_directory = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(package_directory, '..', file_name)
-    if os.path.isfile(path):
-        os.remove(path)
-        print(f"{file_name} removed")
-        return True
-    else:
-        print(f"Failed to remove {file_name}")
+
+    if not os.path.isfile(path):
         return False
+
+    os.remove(path)
+    print(f"{file_name} removed")
+    return True
 
 
 def load_orders(file_name: str = 'orders.json') -> List[Order]:
-    file = _read_file(file_name)
-    if file:
-       data = json.load(file)
-
+    """ load all orders found in file_name """
+    data = read_json_file(file_name)
     if not data:
         return []
 
@@ -39,31 +36,37 @@ def load_orders(file_name: str = 'orders.json') -> List[Order]:
 
 
 def load_password(file_name: str = 'pw.txt'):
-    file = _read_file(file_name)
-    if file:
-        return file.read()
-    else:
+    """ reads the password files content """
+    path = to_file_path(file_name)
+    if not os.path.exists(path):
+        print(f"Password file not found")
         return ""
+
+    with open(path) as file:
+        return file.read()
 
 
 def save_file(file_name: str, data: str):
+    """ writes a file, if a file with file_name already exists its content gets overwritten """
     package_directory = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(package_directory, '..', file_name)
-    with open(path, 'w') as fh:
-        fh.write(data)
+    with open(path, 'w') as file:
+        file.write(data)
 
 
 def read_json_file(file_name):
-    file = _read_file(file_name)
-    if file:
+    """ returns a json object based on the file content under file_name"""
+    path = to_file_path(file_name)
+    if not os.path.exists(path):
+        print(f"{file_name} not found")
+        return ""
+
+    with open(path) as file:
         return json.load(file)
 
 
-def _read_file(file_name: str):
+def to_file_path(file_name):
+    """ :returns an existing absolute file path based on the project root directory + file_name"""
     package_directory = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(package_directory, '..', file_name)
-    if os.path.exists(path):
-        file = open(path)
-        return file
-    else:
-        print(f"{file_name} not found")
+    return path
