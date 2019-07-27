@@ -1,12 +1,17 @@
 venv/
+.venv/
+env
+
 .idea/
+
 .pytype/
+
 */__pycache__/
 .mypy_cache/
+
 geckodriver.log
 scraping/assets/orders.json
 pw.txt
 .pw.txt
-env
 orders.json
 
