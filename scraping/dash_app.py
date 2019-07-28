@@ -21,7 +21,7 @@ layout = dict(
 )
 
 
-def main():
+def main() -> None:
     app = dash.Dash(__name__)
 
     orders = fh.load_orders()
@@ -52,7 +52,7 @@ def main():
     app.run_server(debug=True)
 
 
-def head():
+def head() -> html.Div:
     return html.Div(
         [
             html.H3(

@@ -17,11 +17,10 @@ from . import file_handler
 from .data import Order, Item
 from . import utils as ut
 
+FILE_NAME: str = "orders.json"
 
-FILE_NAME = "orders.json"
 
-
-def main(email: str, password: Optional[str], headless: bool, start: int, end: int, extensive: bool):
+def main(email: str, password: Optional[str], headless: bool, start: int, end: int, extensive: bool) -> None:
     """ function start starts scraping process and storing the result in a file """
     if password is None:
         password = file_handler.load_password()
@@ -37,7 +36,7 @@ def main(email: str, password: Optional[str], headless: bool, start: int, end: i
     browser.quit()
 
 
-def setup_scraping(headless, email, password):
+def setup_scraping(headless: bool, email: str, password: str) -> WebDriver:
     """ prepares the WebDriver for scraping the data by:
         - setting up the WebDrive
         - log in the user with the given credentials
@@ -98,12 +97,13 @@ def is_custom_date_range(start: datetime.date, end: datetime.date) -> bool:
     return start.year != 2010 or end.year != datetime.datetime.now().year
 
 
-def scrape_complete(browser: WebDriver, start_date: datetime.date, end_date: datetime.date, extensive: bool) -> List[Order]:
+def scrape_complete(browser: WebDriver, start_date: datetime.date, end_date: datetime.date, extensive: bool) -> List[
+    Order]:
     """ scrapes all the data without checking for duplicates (when some orders already exist) """
     return scrape_orders(browser, start_date, end_date, extensive)
 
 
-def scrape_partial(orders: List[Order], browser: WebDriver, end_date: datetime.date, extensive: bool):
+def scrape_partial(orders: List[Order], browser: WebDriver, end_date: datetime.date, extensive: bool) -> List[Order]:
     """ scrape data until finding duplicates, at which point the scraping can be canceled since the rest
      is already there """
     orders = sorted(orders, key=lambda order: order.date)
@@ -173,7 +173,8 @@ def scrape_orders(
     return orders
 
 
-def print_progress(start_year: int, end_year: int, current_year: int, orders_len: int, scraping_start_time):
+def print_progress(start_year: int, end_year: int, current_year: int, orders_len: int,
+                   scraping_start_time: float) -> None:
     already_scraped_years = end_year - current_year + 1
     years_ahead = current_year - start_year
 
@@ -243,7 +244,7 @@ def get_order_info(order_info_element: WebElement) -> Tuple[str, float, datetime
     return order_id, order_price, date
 
 
-def get_item_seller(item_element) -> str:
+def get_item_seller(item_element: WebElement) -> str:
     try:
         seller = item_element.text.split('durch: ')[1]
         seller = seller.split('\n')[0]
@@ -252,7 +253,7 @@ def get_item_seller(item_element) -> str:
         return 'not available'
 
 
-def get_item_title(item_element) -> Tuple[str, str]:
+def get_item_title(item_element: WebElement) -> Tuple[str, str]:
     item_elements = item_element.find_element_by_class_name('a-col-right') \
         .find_elements_by_class_name('a-row')
     item_title_element = item_elements[0]
@@ -325,7 +326,7 @@ def get_item_categories(item_link: str, browser: WebDriver) -> Dict[int, str]:
     return categories
 
 
-def get_item_categories_from_normal(browser: WebDriver):
+def get_item_categories_from_normal(browser: WebDriver) -> Dict[int, str]:
     categories = dict()
     categories_element = browser.find_element_by_id('wayfinding-breadcrumbs_container')
     for index, category_element in enumerate(categories_element.find_elements_by_class_name("a-list-item")):
@@ -337,7 +338,7 @@ def get_item_categories_from_normal(browser: WebDriver):
     return categories
 
 
-def get_item_categories_from_video(browser: WebDriver):
+def get_item_categories_from_video(browser: WebDriver) -> Dict[int, str]:
     categories = dict()
     text: str = browser.find_element_by_class_name('dv-dp-node-meta-info').text
     genre = text.split("\n")[0]
@@ -350,11 +351,11 @@ def get_item_categories_from_video(browser: WebDriver):
     return categories
 
 
-def navigate_to_orders_page(browser: WebDriver):
+def navigate_to_orders_page(browser: WebDriver) -> None:
     browser.get('https://www.amazon.de/gp/css/order-history?ref_=nav_orders_first')
 
 
-def complete_sign_in_form(browser: WebDriver, email: str, password: str):
+def complete_sign_in_form(browser: WebDriver, email: str, password: str) -> None:
     """ searches for the sign in form enters the credentials and confirms
         if successful amazon redirects the browser to the previous site """
     try:
@@ -377,7 +378,7 @@ def signed_in_successful(browser: WebDriver) -> bool:
     return browser.current_url != 'https://www.amazon.de/ap/signin'
 
 
-def skip_adding_phone_number(browser: WebDriver):
+def skip_adding_phone_number(browser: WebDriver) -> None:
     """ find and click the 'skip adding phone number' button if found on the current page """
     try:
         skip_adding_phone_link = browser.find_element_by_id('ap-account-fixup-phone-skip-link')
@@ -396,7 +397,7 @@ def is_next_page_available(browser: WebDriver) -> bool:
         return True
 
 
-def is_paging_menu_available(browser: WebDriver):
+def is_paging_menu_available(browser: WebDriver) -> bool:
     """ returns whether there are multiple pages for the current year by searching for a paging menu """
     try:
         return browser.find_element_by_class_name('a-pagination') is not None
@@ -404,13 +405,13 @@ def is_paging_menu_available(browser: WebDriver):
         return False
 
 
-def are_orders_for_year_available(browser: WebDriver):
+def are_orders_for_year_available(browser: WebDriver) -> bool:
     return browser.page_source.find('keine Bestellungen aufgegeben') == -1
 
 
-def is_digital_order(order_id):
+def is_digital_order(order_id: str) -> bool:
     return order_id[:3] == 'D01'
 
 
-def price_str_to_float(price_str) -> float:
+def price_str_to_float(price_str: str) -> float:
     return float((price_str[4:]).replace(',', '.'))

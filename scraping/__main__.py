@@ -10,12 +10,12 @@ from . import dash_app, scraping
 
 
 @click.group()
-def main():
+def main() -> None:
     pass
 
 
 @main.command()
-def dash():
+def dash() -> None:
     dash_app.main()
 
 #@click.option("--password", required=False, default=None, hide_input=True, prompt=True, help="the users password")
@@ -29,7 +29,7 @@ def dash():
               help="the year to end with. If not set the current year is used.")
 @click.option("--extensive", default=True,
               help="if set to False categorization for items isn't available, but scraping itself should be faster")
-def scrape(email: str, password: Optional[str], headless: bool, start: int, end: int, extensive: bool):
+def scrape(email: str, password: Optional[str], headless: bool, start: int, end: int, extensive: bool) -> None:
     scraping.main(email, password, bool(headless), start, end, extensive)
 
 

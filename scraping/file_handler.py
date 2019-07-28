@@ -10,7 +10,7 @@ from .data import Order
 
 
 def remove_file(file_name: str) -> bool:
-    """ removes a file with file_name """
+    """ removes a file with :param file_name """
     package_directory = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(package_directory, '..', file_name)
 
@@ -35,7 +35,7 @@ def load_orders(file_name: str = 'orders.json') -> List[Order]:
     return orders
 
 
-def load_password(file_name: str = 'pw.txt'):
+def load_password(file_name: str = 'pw.txt') -> str:
     """ reads the password files content """
     path = to_file_path(file_name)
     if not os.path.exists(path):
@@ -46,7 +46,7 @@ def load_password(file_name: str = 'pw.txt'):
         return file.read()
 
 
-def save_file(file_name: str, data: str):
+def save_file(file_name: str, data: str) -> None:
     """ writes a file, if a file with file_name already exists its content gets overwritten """
     package_directory = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(package_directory, '..', file_name)
@@ -54,8 +54,8 @@ def save_file(file_name: str, data: str):
         file.write(data)
 
 
-def read_json_file(file_name):
-    """ returns a json object based on the file content under file_name"""
+def read_json_file(file_name: str) -> object:
+    """ :returns a json object based on the file content under file_name"""
     path = to_file_path(file_name)
     if not os.path.exists(path):
         print(f"{file_name} not found")
@@ -65,7 +65,7 @@ def read_json_file(file_name):
         return json.load(file)
 
 
-def to_file_path(file_name):
+def to_file_path(file_name: str) -> str:
     """ :returns an existing absolute file path based on the project root directory + file_name"""
     package_directory = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(package_directory, '..', file_name)

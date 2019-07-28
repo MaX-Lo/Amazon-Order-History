@@ -1,6 +1,7 @@
 """
 data classes for orders and items
 """
+from __future__ import annotations
 
 import datetime
 from dataclasses import dataclass
@@ -41,7 +42,7 @@ class Order:
     date: datetime.date
     items: List[Item]
 
-    def is_equal(self, order) -> bool:
+    def is_equal(self, order: Order) -> bool:
         """ compares to orders for equality by comparing their ids"""
         return order.order_id == self.order_id
 
@@ -53,7 +54,7 @@ class Order:
         return attr_dict
 
     @staticmethod
-    def from_dict(order_dict: Dict) -> 'Order':
+    def from_dict(order_dict: Dict) -> Order:
         """ returns an order object for a given order as dict """
         order_id = order_dict['order_id']
         price = float(order_dict['price'])

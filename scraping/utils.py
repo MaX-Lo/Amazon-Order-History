@@ -4,6 +4,7 @@ helper functions
 import datetime
 
 from collections import OrderedDict
+from typing import List, Dict
 
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
@@ -11,7 +12,7 @@ from selenium.webdriver.firefox.webdriver import WebDriver
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.wait import WebDriverWait
 
-MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November',
+MONTHS: List[str] = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November',
           'Dezember']
 
 
@@ -26,7 +27,7 @@ def str_to_date(date_str: str) -> datetime.date:
     return datetime.date(day=day, month=month, year=year)
 
 
-def serialize_date(obj) -> str:
+def serialize_date(obj: object) -> str:
     """JSON serializer for objects not serializable by default json code"""
 
     if isinstance(obj, (datetime.datetime, datetime.date)):
@@ -60,14 +61,14 @@ def wait_for_element_by_id(browser: WebDriver, order_id: object, timeout: object
         return False
 
 
-def sort_dict_by_key(dic):
+def sort_dict_by_key(dic: Dict) -> OrderedDict:
     """
     sorts a dict by its keys
 
     :param dic: the dictionary to sort by keys
     :return: a ordered dict with sorted keys
     """
-    return_dict = OrderedDict()
+    return_dict: OrderedDict = OrderedDict()
 
     keys = list(dic.keys())
     keys.sort()

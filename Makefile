@@ -6,3 +6,9 @@ type_check:
 
 scrape:
 	python3 -m scraping scrape --email lorenzmax098@gmail.com
+
+headless:
+	python3 -m scraping scrape --headless --email lorenzmax098@gmail.com
+
+dash:
+	python3 -m scraping dash
