@@ -1,7 +1,7 @@
 """
 Contains an Evaluation class which provides methods to analyse a given list of Orders
 """
-
+# pylint: disable=C0111
 import datetime
 
 from typing import List, Dict

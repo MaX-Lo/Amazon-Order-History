@@ -2,6 +2,9 @@
 downloads and parses the data from amazon.de to store it in a orders.json file
 """
 # pylint: disable=R0913
+# pylint: disable=W0201
+# pylint: disable=C0103
+
 import datetime
 import json
 from dataclasses import dataclass

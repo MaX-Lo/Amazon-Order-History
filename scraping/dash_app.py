@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=C0111
+# pylint: disable=C0330
+
 import copy
 from typing import Dict
 
@@ -11,7 +14,7 @@ from scraping.evaluation import Evaluation
 from . import evaluation
 from . import file_handler as fh
 
-layout = dict(
+LAYOUT = dict(
     autosize=True,
     margin=dict(l=30, r=30, b=20, t=40),
     hovermode="closest",
@@ -68,34 +71,34 @@ def head() -> html.Div:
     )
 
 
-def general_information(eval: Evaluation) -> html.Div:
+def general_information(evaluated: Evaluation) -> html.Div:
     return html.Div([
         html.Div(
-            [f" {eval.get_total()}€", html.H6("Amazon (all)")],
+            [f" {evaluated.get_total()}€", html.H6("Amazon (all)")],
             className='mini_container'
         ),
         html.Div(
-            [f"{eval.get_audible_total()}€", html.H6("Audible")],
+            [f"{evaluated.get_audible_total()}€", html.H6("Audible")],
             className='mini_container'
         ),
         html.Div(
-            [f"{eval.get_instant_video_total()}€", html.H6("Prime Instant Video")],
+            [f"{evaluated.get_instant_video_total()}€", html.H6("Prime Instant Video")],
             className='mini_container'
         ),
         html.Div(
-            [f"{eval.get_most_expensive_order()[0].price}€", html.H6("max order price")],
+            [f"{evaluated.get_most_expensive_order()[0].price}€", html.H6("max order price")],
             className='mini_container'
         ),
         html.Div(
-            [f"{len(eval.get_orders_with_most_items()[0].items)} items", html.H6("largest order")],
+            [f"{len(evaluated.get_orders_with_most_items()[0].items)} items", html.H6("largest order")],
             className='mini_container'
         ),
         html.Div(
-            [f"{eval.get_order_count()}", html.H6("Orders")],
+            [f"{evaluated.get_order_count()}", html.H6("Orders")],
             className='mini_container'
         ),
         html.Div(
-            [f"{eval.get_item_count()}", html.H6("Items")],
+            [f"{evaluated.get_item_count()}", html.H6("Items")],
             className='mini_container'
         ),
 
@@ -112,18 +115,18 @@ def gen_scatter(data: Dict, name: str) -> dcc.Graph:
     return go.Scatter(x=list(data.keys()), y=list(data.values()), name=name)
 
 
-def gen_stacked_totals_graph(eval: Evaluation) -> html.Div:
+def gen_stacked_totals_graph(evaluated: Evaluation) -> html.Div:
     """ generates a graph with each bar subdivided into different categories
         - ToDo (prime music unlimited)
         - ToDo (prime membership fee)
     """
     fig = go.Figure(data=[
-        gen_bar(eval.audible_total_by_year(), 'audible'),
-        gen_bar(eval.instant_video_total_per_year(), 'prime instant video'),
-        gen_bar(eval.prime_member_fee_by_year(), 'amazon prime member fee'),
-        gen_bar(eval.added_balance_per_year(), 'balance added'),
-        gen_bar(eval.uncategorized_totals_per_year(), 'uncategorized'),
-    ], layout=copy.deepcopy(layout))
+        gen_bar(evaluated.audible_total_by_year(), 'audible'),
+        gen_bar(evaluated.instant_video_total_per_year(), 'prime instant video'),
+        gen_bar(evaluated.prime_member_fee_by_year(), 'amazon prime member fee'),
+        gen_bar(evaluated.added_balance_per_year(), 'balance added'),
+        gen_bar(evaluated.uncategorized_totals_per_year(), 'uncategorized'),
+    ], layout=copy.deepcopy(LAYOUT))
 
     fig.update_layout(
         barmode='stack',
@@ -144,13 +147,13 @@ def gen_stacked_totals_graph(eval: Evaluation) -> html.Div:
     )
 
 
-def gen_scatter_by_month_graph(eval: Evaluation) -> html.Div:
+def gen_scatter_by_month_graph(evaluated: Evaluation) -> html.Div:
     """ generates a line graph with spend amount for each month """
 
     fig = go.Figure(data=[
-        gen_scatter(eval.totals_by_month(), 'total'),
-        gen_scatter(eval.trend_by_month(), 'trend')
-    ], layout=copy.deepcopy(layout))
+        gen_scatter(evaluated.totals_by_month(), 'total'),
+        gen_scatter(evaluated.trend_by_month(), 'trend')
+    ], layout=copy.deepcopy(LAYOUT))
 
     fig.update_layout(
         yaxis=dict(title='Price in €', titlefont_size=18, tickfont_size=16),
@@ -166,9 +169,9 @@ def gen_scatter_by_month_graph(eval: Evaluation) -> html.Div:
     )
 
 
-def gen_one_bar_graph(eval: Evaluation) -> html.Div:
+def gen_one_bar_graph(evaluated: Evaluation) -> html.Div:
 
-    category_sums = eval.total_by_level_1_category()
+    category_sums = evaluated.total_by_level_1_category()
     total = sum(category_sums.values())
     percentages = {category[0]: category[1] / total * 100 for category in category_sums.items()}
 
@@ -176,7 +179,7 @@ def gen_one_bar_graph(eval: Evaluation) -> html.Div:
 
     fig = go.Figure(
         data=data,
-        layout = copy.deepcopy(layout)
+        layout=copy.deepcopy(LAYOUT)
     )
 
     fig.update_layout(

@@ -8,7 +8,7 @@ from typing import Optional
 
 import click
 
-from . import dash_app, scraping
+from . import dash_app
 from .Scraper import Scraper
 
 
