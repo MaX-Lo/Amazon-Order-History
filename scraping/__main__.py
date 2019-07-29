@@ -1,21 +1,26 @@
 """
 Projects entry point providing command parsing
 """
+
+# pylint: disable=R0913
 import datetime
 from typing import Optional
 
 import click
 
 from . import dash_app, scraping
+from .Scraper import Scraper
 
 
 @click.group()
 def main() -> None:
+    """ main entry point of the application """
     pass
 
 
 @main.command()
 def dash() -> None:
+    """ creates a dash app to visualize the evaluated scraping output """
     dash_app.main()
 
 #@click.option("--password", required=False, default=None, hide_input=True, prompt=True, help="the users password")
@@ -30,7 +35,8 @@ def dash() -> None:
 @click.option("--extensive", default=True,
               help="if set to False categorization for items isn't available, but scraping itself should be faster")
 def scrape(email: str, password: Optional[str], headless: bool, start: int, end: int, extensive: bool) -> None:
-    scraping.main(email, password, bool(headless), start, end, extensive)
+    """ starts the scraping process and collects all data """
+    Scraper(email, password, bool(headless), start, end, extensive)
 
 
 if __name__ == '__main__':

@@ -12,8 +12,8 @@ from selenium.webdriver.firefox.webdriver import WebDriver
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.wait import WebDriverWait
 
-MONTHS: List[str] = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November',
-          'Dezember']
+MONTHS: List[str] = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober',
+                     'November', 'Dezember']
 
 
 def str_to_date(date_str: str) -> datetime.date:

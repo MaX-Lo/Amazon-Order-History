@@ -25,24 +25,24 @@ def main() -> None:
     app = dash.Dash(__name__)
 
     orders = fh.load_orders()
-    eval = evaluation.Evaluation(orders)
+    evaluated = evaluation.Evaluation(orders)
 
     app.layout = html.Div(
         children=[
             head(),
             html.Div(
                 [
-                    general_information(eval),
-                    gen_stacked_totals_graph(eval)
+                    general_information(evaluated),
+                    gen_stacked_totals_graph(evaluated)
                 ],
                 className="row flex-display"
             ),
             html.Div(
-                gen_scatter_by_month_graph(eval),
+                gen_scatter_by_month_graph(evaluated),
                 className="row flex-display"
             ),
             html.Div(
-                gen_one_bar_graph(eval),
+                gen_one_bar_graph(evaluated),
                 className="row flex-display"
             )
         ],
