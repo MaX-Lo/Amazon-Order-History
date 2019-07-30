@@ -7,6 +7,7 @@ from __future__ import annotations
 import datetime
 import logging
 from cmd import Cmd
+from termcolor import colored
 from typing import Tuple, List, Dict, Any
 
 from scraping import dash_app, utils
@@ -25,7 +26,7 @@ class Cli(Cmd):
 
         logger = logging.getLogger(__name__)
 
-        self.prompt: str = "Scraping >> "
+        self.prompt: str = colored("Scraping >> ", 'cyan')
         self.SCRAPING_OPTIONS: List[Tuple[str, OptionType, ArgumentType]] = [
             ('email', OptionType.REQUIRED, ArgumentType.SINGLE_STRING),
             ('password', OptionType.OPTIONAL, ArgumentType.SINGLE_STRING),

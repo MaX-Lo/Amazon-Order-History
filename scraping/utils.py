@@ -14,7 +14,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.webdriver import WebDriver
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.wait import WebDriverWait
-
+from termcolor import colored
 
 MONTHS: List[str] = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober',
                      'November', 'Dezember']
@@ -53,8 +53,6 @@ def is_int_parsable(int_str: str) -> bool:
     except ValueError:
         return False
 
-logger = logging.getLogger(__name__)
-
 
 def str_to_date(date_str: str) -> datetime.date:
     """ expects a date str formatted in german date format as 'day. month year' e.g. '4. September 2018' """
@@ -83,7 +81,7 @@ def wait_for_element_by_class_name(browser: WebDriver, class_name: str, timeout:
         WebDriverWait(browser, timeout).until(ec.presence_of_element_located((By.CLASS_NAME, class_name)))
         return True
     except TimeoutException:
-        LOGGER.warning(f'Skipping, loading for "{class_name}" too much time! (>{timeout}sec)')
+        LOGGER.warning(colored(f'Skipping, loading for "{class_name}" too much time! (>{timeout}sec)', 'yellow'))
         return False
 
 
@@ -97,7 +95,7 @@ def wait_for_element_by_id(browser: WebDriver, element_id: object, timeout: obje
         WebDriverWait(browser, timeout).until(ec.presence_of_element_located((By.ID, element_id)))
         return True
     except TimeoutException:
-        LOGGER.warning(f'Skipping, loading for "{element_id}" took too much time! (>{timeout}sec)')
+        LOGGER.warning(colored(f'Skipping, loading for "{element_id}" took too much time! (>{timeout}sec)', 'yellow'))
         return False
 
 

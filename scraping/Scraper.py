@@ -16,6 +16,7 @@ from selenium.webdriver import Firefox, FirefoxProfile
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
+from termcolor import colored
 
 from scraping.CustomExceptions import PasswordFileNotFound, LoginError
 from . import file_handler
@@ -41,7 +42,7 @@ class Scraper:
         self.email = email
         self. password = password if password else file_handler.load_password()
         if not self.password:
-            self.logger.error("Password not given nor pw.txt found")
+            self.logger.error(colored("Password not given nor pw.txt found", 'red'))
             raise PasswordFileNotFound
 
         self.start_date: datetime.date = datetime.date(year=start, month=1, day=1)
@@ -61,6 +62,8 @@ class Scraper:
         file_handler.save_file(FILE_NAME, json.dumps([order.to_dict() for order in self.orders]))
         self.browser.quit()
 
+    
+
     def _setup_scraping(self) -> None:
         """
         prepares the WebDriver for scraping the data by:
@@ -76,12 +79,12 @@ class Scraper:
         opts = Options()
         opts.headless = self.headless
         if opts.headless:
-            self.logger.info("Run in headless mode.")
+            self.logger.info(colored("Run in headless mode.", 'blue'))
         self.browser = Firefox(options=opts, firefox_profile=firefox_profile)
         self._navigate_to_orders_page()
         self._complete_sign_in_form()
         if not self._signed_in_successful():
-            self.logger.error("Couldn't sign in. Maybe your credentials are incorrect?")
+            self.logger.error(colored("Couldn't sign in. Maybe your credentials are incorrect?", 'red'))
             self.browser.quit()
             raise LoginError
         self._skip_adding_phone_number()
@@ -107,7 +110,7 @@ class Scraper:
             sign_in_input = self.browser.find_element_by_id('signInSubmit')
             sign_in_input.click()
         except NoSuchElementException:
-            self.logger.error("Error while trying to sign in, couldn't find all needed form elements")
+            self.logger.error(colored("Error while trying to sign in, couldn't find all needed form elements", 'red'))
 
     def _signed_in_successful(self) -> bool:
         """ simple check if we are still on the login page """
@@ -118,9 +121,9 @@ class Scraper:
         try:
             skip_adding_phone_link = self.browser.find_element_by_id('ap-account-fixup-phone-skip-link')
             skip_adding_phone_link.click()
-            self.logger.info('skipped adding phone number')
+            self.logger.info(colored('skipped adding phone number', 'blue'))
         except NoSuchElementException:
-            self.logger.info('no need to skip adding phone number')
+            self.logger.info(colored('no need to skip adding phone number', 'blue'))
 
     def _is_custom_date_range(self) -> bool:
         """
@@ -367,7 +370,7 @@ class Scraper:
 
         except (NoSuchElementException, ValueError):
             item_price = 0
-            self.logger.warning(f'Could not parse price for order:\n{order_element.text}')
+            self.logger.warning(colored(f'Could not parse price for order:\n{order_element.text}', 'yellow'))
 
         finally:
             self.browser.close()

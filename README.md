@@ -11,6 +11,14 @@ Currently only works for the german version of Amazon (amazon.de). For amazon.co
 
 3) Make sure your [Geckodriver](https://github.com/mozilla/geckodriver/releases/tag/v0.24.0 "Geckodriver Releases")
 is installed and on your PATH variable.
+For convenience there is a bash script in the project root dir for that.
+This script downloads the latest version of geckodriver, makes it executable and puts in the /usr/share/bin which is 
+already in the PATH by default. It need sudo permission to do so though. 
+For the Skript run: 
+
+`chmod +x geckodriver_installer.sh`
+
+`./geckodriver.sh`.
 
 # Usage
 If you are using a device where you've never logged in before, Amazon might require a confirmation code from an email

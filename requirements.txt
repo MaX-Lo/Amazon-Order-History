@@ -6,3 +6,4 @@ dash
 dash-daq
 mypy
 pylint
+termcolor

@@ -7,6 +7,8 @@ import logging
 import os
 from typing import List, Iterable
 
+from termcolor import colored
+
 from .data import Order
 
 LOGGER = logging.getLogger(__name__)
@@ -21,7 +23,7 @@ def remove_file(file_name: str) -> bool:
         return False
 
     os.remove(path)
-    LOGGER.info(f"{file_name} removed")
+    LOGGER.info(colored(f"{file_name} removed", 'blue'))
     return True
 
 
@@ -42,7 +44,7 @@ def load_password(file_name: str = 'pw.txt') -> str:
     """ reads the password files content """
     path = to_file_path(file_name)
     if not os.path.exists(path):
-        LOGGER.warning(f"Password file not found")
+        LOGGER.warning(colored(f"Password file not found", 'yellow'))
         return ""
 
     with open(path) as file:
@@ -61,7 +63,7 @@ def read_json_file(file_name: str) -> Iterable:
     """ :returns a json object based on the file content under file_name"""
     path = to_file_path(file_name)
     if not os.path.exists(path):
-        LOGGER.warning(f"{file_name} not found")
+        LOGGER.warning(colored(f"{file_name} not found", 'yellow'))
         return []
 
     with open(path) as file:
