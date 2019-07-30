@@ -6,6 +6,7 @@ import datetime
 import json
 from typing import List, Tuple, Optional, Dict
 import time
+import logging
 
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver import Firefox, FirefoxProfile
@@ -20,13 +21,16 @@ from . import utils as ut
 
 FILE_NAME = "orders.json"
 
+logger = logging.getLogger(__name__)
+
 
 def main(email: str, password: Optional[str], headless: bool, start: int, end: int, extensive: bool):
+
     """ function start starts scraping process and storing the result in a file """
     if password is None:
         password = file_handler.load_password()
         if password == "":
-            print("Password not given nor pw.txt found")
+            logger.error("Password not given nor pw.txt found")
             exit(1)
 
     browser = setup_scraping(headless, email, password)
@@ -43,6 +47,7 @@ def setup_scraping(headless, email, password):
         - log in the user with the given credentials
         - skipping the adding phone number dialog (should it appear)
     """
+
     fp = FirefoxProfile()
     fp.set_preference("browser.tabs.remote.autostart", False)
     fp.set_preference("browser.tabs.remote.autostart.1", False)
@@ -50,12 +55,12 @@ def setup_scraping(headless, email, password):
     opts = Options()
     opts.headless = headless
     if opts.headless:
-        print("Run in headless mode.")
+        logging.info("Run in headless mode.")
     browser = Firefox(options=opts, firefox_profile=fp)
     navigate_to_orders_page(browser)
     complete_sign_in_form(browser, email, password)
     if not signed_in_successful(browser):
-        print("Couldn't sign in. Maybe your credentials are incorrect?")
+        logger.error("Couldn't sign in. Maybe your credentials are incorrect?")
         browser.quit()
         exit()
     skip_adding_phone_number(browser)
@@ -86,7 +91,7 @@ def get_orders(browser: WebDriver, start_year: int, end_year: int, extensive: bo
     if data:
         for order_dict in data:
             orders.append(Order.from_dict(order_dict))
-        orders = scrape_partial(orders, browser, start_date, extensive)
+        orders = scrape_partial(orders, browser, end_date, extensive)
     else:
         orders = scrape_complete(browser, start_date, end_date, extensive)
     orders = sorted(orders, key=lambda order: order.date)
@@ -167,8 +172,6 @@ def scrape_orders(
                 next_page_link = pagination_element.find_element_by_class_name('a-last') \
                     .find_element_by_css_selector('a').get_attribute('href')
                 browser.get(next_page_link)
-        current_year = datetime.datetime.now().year + 2 - order_filter_index
-        print_progress(start_year, end_year, current_year, len(orders), start_time)
 
     return orders
 
@@ -288,12 +291,11 @@ def get_item_price_through_details_page(order_element: WebElement, item_index: i
 
         od_shipments_element = browser.find_element_by_class_name('od-shipments')
         price_fields: List[WebElement] = od_shipments_element.find_elements_by_class_name('a-color-price')
-        print([price_str_to_float(price.text) for price in price_fields])
         item_price = price_str_to_float(price_fields[item_index].text)
 
     except (NoSuchElementException, ValueError):
         item_price = 0
-        print(f'Could not parse price for order:\n{order_element.text}')
+        logger.info(f'Could not parse price for order:\n{order_element.text}')
 
     finally:
         browser.close()
@@ -369,7 +371,7 @@ def complete_sign_in_form(browser: WebDriver, email: str, password: str):
         sign_in_input = browser.find_element_by_id('signInSubmit')
         sign_in_input.click()
     except NoSuchElementException:
-        print("Error while trying to sign in, couldn't find all needed form elements")
+        logger.error("Error while trying to sign in, couldn't find all needed form elements")
 
 
 def signed_in_successful(browser: WebDriver) -> bool:
@@ -382,9 +384,9 @@ def skip_adding_phone_number(browser: WebDriver):
     try:
         skip_adding_phone_link = browser.find_element_by_id('ap-account-fixup-phone-skip-link')
         skip_adding_phone_link.click()
-        print('skipped adding phone number')
+        logging.info('skipped adding phone number')
     except NoSuchElementException:
-        print('no need to skip adding phone number')
+        logger.info('no need to skip adding phone number')
 
 
 def is_next_page_available(browser: WebDriver) -> bool:

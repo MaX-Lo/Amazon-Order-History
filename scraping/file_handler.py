@@ -3,10 +3,13 @@ contains file handling related methods
 """
 
 import json
+import logging
 import os
 from typing import List
 
 from .data import Order
+
+logger = logging.getLogger(__name__)
 
 
 def remove_file(file_name: str) -> bool:
@@ -18,7 +21,7 @@ def remove_file(file_name: str) -> bool:
         return False
 
     os.remove(path)
-    print(f"{file_name} removed")
+    logger.info(f"{file_name} removed")
     return True
 
 
@@ -39,7 +42,7 @@ def load_password(file_name: str = 'pw.txt'):
     """ reads the password files content """
     path = to_file_path(file_name)
     if not os.path.exists(path):
-        print(f"Password file not found")
+        logger.warning(f"Password file not found")
         return ""
 
     with open(path) as file:
@@ -58,7 +61,7 @@ def read_json_file(file_name):
     """ returns a json object based on the file content under file_name"""
     path = to_file_path(file_name)
     if not os.path.exists(path):
-        print(f"{file_name} not found")
+        logger.warning(f"{file_name} not found")
         return ""
 
     with open(path) as file:

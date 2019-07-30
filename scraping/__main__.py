@@ -2,6 +2,8 @@
 Projects entry point providing command parsing
 """
 import datetime
+import logging
+import sys
 from typing import Optional
 
 import click
@@ -11,7 +13,7 @@ from . import dash_app, scraping
 
 @click.group()
 def main():
-    pass
+    setup_logger()
 
 
 @main.command()
@@ -31,6 +33,19 @@ def dash():
               help="if set to False categorization for items isn't available, but scraping itself should be faster")
 def scrape(email: str, password: Optional[str], headless: bool, start: int, end: int, extensive: bool):
     scraping.main(email, password, bool(headless), start, end, extensive)
+
+
+def setup_logger() -> None:
+    """ Setup the logging configuration """
+    logging.basicConfig(level=logging.INFO)
+    # ToDo replace hardcoded package name, __name__ doesn't work since it contains __main__ if executed as such
+    root_logger = logging.getLogger("scraping")
+    handler = logging.StreamHandler(stream=sys.stdout)
+    formatter = logging.Formatter("[%(asctime)s - %(levelname)s - %(name)s] %(message)s")
+    handler.setFormatter(formatter)
+    root_logger.handlers.clear()
+    root_logger.addHandler(handler)
+    root_logger.setLevel(logging.INFO)
 
 
 if __name__ == '__main__':

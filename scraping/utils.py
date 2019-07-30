@@ -2,7 +2,7 @@
 helper functions
 """
 import datetime
-
+import logging
 from collections import OrderedDict
 
 from selenium.common.exceptions import TimeoutException
@@ -13,6 +13,8 @@ from selenium.webdriver.support.wait import WebDriverWait
 
 MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November',
           'Dezember']
+
+logger = logging.getLogger(__name__)
 
 
 def str_to_date(date_str: str) -> datetime.date:
@@ -42,21 +44,21 @@ def wait_for_element_by_class_name(browser: WebDriver, class_name: str, timeout:
         WebDriverWait(browser, timeout).until(ec.presence_of_element_located((By.CLASS_NAME, class_name)))
         return True
     except TimeoutException:
-        print(f'Skipping, loading took too much time! (>{timeout}sec)')
+        logger.warning(f'Skipping, loading for "{class_name}" too much time! (>{timeout}sec)')
         return False
 
 
-def wait_for_element_by_id(browser: WebDriver, order_id: object, timeout: object = 3) -> bool:
+def wait_for_element_by_id(browser: WebDriver, element_id: object, timeout: object = 3) -> bool:
     """
     wait the specified timout for a element to load
 
     :return True if element was found in the given timeout and False otherwise
     """
     try:
-        WebDriverWait(browser, timeout).until(ec.presence_of_element_located((By.ID, order_id)))
+        WebDriverWait(browser, timeout).until(ec.presence_of_element_located((By.ID, element_id)))
         return True
     except TimeoutException:
-        print(f'Skipping, loading for {order_id} took too much time! (>{timeout}sec)')
+        logger.warning(f'Skipping, loading for "{element_id}" took too much time! (>{timeout}sec)')
         return False
 
 
