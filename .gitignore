@@ -10,8 +10,9 @@ env
 .mypy_cache/
 
 geckodriver.log
-scraping/assets/orders.json
+orders.json
 pw.txt
 .pw.txt
 orders.json
 
+./Makefile

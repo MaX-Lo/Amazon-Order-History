@@ -1,19 +1,19 @@
 """
 contains file handling related methods
 """
-
+# pylint: disable=W1203
 import json
 import logging
 import os
-from typing import List
+from typing import List, Iterable
 
 from .data import Order
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 def remove_file(file_name: str) -> bool:
-    """ removes a file with file_name """
+    """ removes a file with :param file_name """
     package_directory = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(package_directory, '..', file_name)
 
@@ -21,7 +21,7 @@ def remove_file(file_name: str) -> bool:
         return False
 
     os.remove(path)
-    logger.info(f"{file_name} removed")
+    LOGGER.info(f"{file_name} removed")
     return True
 
 
@@ -38,18 +38,18 @@ def load_orders(file_name: str = 'orders.json') -> List[Order]:
     return orders
 
 
-def load_password(file_name: str = 'pw.txt'):
+def load_password(file_name: str = 'pw.txt') -> str:
     """ reads the password files content """
     path = to_file_path(file_name)
     if not os.path.exists(path):
-        logger.warning(f"Password file not found")
+        LOGGER.warning(f"Password file not found")
         return ""
 
     with open(path) as file:
         return file.read()
 
 
-def save_file(file_name: str, data: str):
+def save_file(file_name: str, data: str) -> None:
     """ writes a file, if a file with file_name already exists its content gets overwritten """
     package_directory = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(package_directory, '..', file_name)
@@ -57,18 +57,18 @@ def save_file(file_name: str, data: str):
         file.write(data)
 
 
-def read_json_file(file_name):
-    """ returns a json object based on the file content under file_name"""
+def read_json_file(file_name: str) -> Iterable:
+    """ :returns a json object based on the file content under file_name"""
     path = to_file_path(file_name)
     if not os.path.exists(path):
-        logger.warning(f"{file_name} not found")
-        return ""
+        LOGGER.warning(f"{file_name} not found")
+        return []
 
     with open(path) as file:
-        return json.load(file)
+        return iter(json.load(file))
 
 
-def to_file_path(file_name):
+def to_file_path(file_name: str) -> str:
     """ :returns an existing absolute file path based on the project root directory + file_name"""
     package_directory = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(package_directory, '..', file_name)

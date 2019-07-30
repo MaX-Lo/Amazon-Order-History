@@ -1,9 +1,13 @@
 """
 helper functions
 """
+# pylint: disable=W1203
+
 import datetime
 import logging
 from collections import OrderedDict
+from enum import Enum
+from typing import List, Dict
 
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
@@ -11,8 +15,43 @@ from selenium.webdriver.firefox.webdriver import WebDriver
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.wait import WebDriverWait
 
-MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November',
-          'Dezember']
+
+MONTHS: List[str] = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober',
+                     'November', 'Dezember']
+
+
+class OptionType(Enum):
+    """
+    Enum if an argument is required or optional
+    """
+    REQUIRED = 1
+    OPTIONAL = 0
+
+
+class ArgumentType(Enum):
+    """
+    Enum for arguments
+    """
+    FLAG = 1
+    SINGLE_STRING = 0
+    MULTI_STRING = 2
+    SINGLE_INT = 3
+    MULTI_INT = 4
+
+
+LOGGER = logging.getLogger(__name__)
+
+
+def is_int_parsable(int_str: str) -> bool:
+    """
+    :param int_str: the string value that shall be parsed
+    :return: if it was parseable
+    """
+    try:
+        int(int_str)
+        return True
+    except ValueError:
+        return False
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +67,7 @@ def str_to_date(date_str: str) -> datetime.date:
     return datetime.date(day=day, month=month, year=year)
 
 
-def serialize_date(obj) -> str:
+def serialize_date(obj: object) -> str:
     """JSON serializer for objects not serializable by default json code"""
 
     if isinstance(obj, (datetime.datetime, datetime.date)):
@@ -44,7 +83,7 @@ def wait_for_element_by_class_name(browser: WebDriver, class_name: str, timeout:
         WebDriverWait(browser, timeout).until(ec.presence_of_element_located((By.CLASS_NAME, class_name)))
         return True
     except TimeoutException:
-        logger.warning(f'Skipping, loading for "{class_name}" too much time! (>{timeout}sec)')
+        LOGGER.warning(f'Skipping, loading for "{class_name}" too much time! (>{timeout}sec)')
         return False
 
 
@@ -58,18 +97,18 @@ def wait_for_element_by_id(browser: WebDriver, element_id: object, timeout: obje
         WebDriverWait(browser, timeout).until(ec.presence_of_element_located((By.ID, element_id)))
         return True
     except TimeoutException:
-        logger.warning(f'Skipping, loading for "{element_id}" took too much time! (>{timeout}sec)')
+        LOGGER.warning(f'Skipping, loading for "{element_id}" took too much time! (>{timeout}sec)')
         return False
 
 
-def sort_dict_by_key(dic):
+def sort_dict_by_key(dic: Dict) -> OrderedDict:
     """
     sorts a dict by its keys
 
     :param dic: the dictionary to sort by keys
     :return: a ordered dict with sorted keys
     """
-    return_dict = OrderedDict()
+    return_dict: OrderedDict = OrderedDict()
 
     keys = list(dic.keys())
     keys.sort()

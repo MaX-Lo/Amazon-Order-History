@@ -1,6 +1,8 @@
 """
 Projects entry point providing command parsing
 """
+
+# pylint: disable=R0913
 import datetime
 import logging
 import sys
@@ -8,19 +10,31 @@ from typing import Optional
 
 import click
 
-from . import dash_app, scraping
+from scraping.CustomExceptions import PasswordFileNotFound, LoginError
+from scraping.cli import Cli
+from . import dash_app
+from .Scraper import Scraper
 
 
 @click.group()
-def main():
+def main() -> None:
+    """ main entry point of the application """
     setup_logger()
 
 
 @main.command()
-def dash():
+def cli() -> None:
+    """starts the CLI"""
+    Cli()
+
+
+@main.command()
+def dash() -> None:
+    """ creates a dash app to visualize the evaluated scraping output """
     dash_app.main()
 
-#@click.option("--password", required=False, default=None, hide_input=True, prompt=True, help="the users password")
+
+# @click.option("--password", required=False, default=None, hide_input=True, prompt=True, help="the users password")
 @main.command()
 @click.option("--email", required=True, help="The users email address")
 @click.option("--password", required=False, default=None, help="the users password")
@@ -31,8 +45,25 @@ def dash():
               help="the year to end with. If not set the current year is used.")
 @click.option("--extensive", default=True,
               help="if set to False categorization for items isn't available, but scraping itself should be faster")
-def scrape(email: str, password: Optional[str], headless: bool, start: int, end: int, extensive: bool):
-    scraping.main(email, password, bool(headless), start, end, extensive)
+def scrape(email: str, password: Optional[str], headless: bool, start: int, end: int, extensive: bool) -> None:
+    """ starts the scraping process and collects all data """
+    try:
+        Scraper(email, password, bool(headless), start, end, extensive)
+    except (PasswordFileNotFound, LoginError):
+        exit(1)
+
+
+def setup_logger() -> None:
+    """ Setup the logging configuration """
+    logging.basicConfig(level=logging.INFO)
+    # ToDo replace hardcoded package name, __name__ doesn't work since it contains __main__ if executed as such
+    root_logger = logging.getLogger("scraping")
+    handler = logging.StreamHandler(stream=sys.stdout)
+    formatter = logging.Formatter("[%(asctime)s - %(levelname)s - %(name)s] %(message)s")
+    handler.setFormatter(formatter)
+    root_logger.handlers.clear()
+    root_logger.addHandler(handler)
+    root_logger.setLevel(logging.INFO)
 
 
 def setup_logger() -> None:

@@ -1,7 +1,7 @@
 """
 Contains an Evaluation class which provides methods to analyse a given list of Orders
 """
-
+# pylint: disable=C0111
 import datetime
 
 from typing import List, Dict
@@ -31,7 +31,7 @@ class Evaluation:
     def get_item_count(self) -> int:
         return sum([len(order.items) for order in self.orders])
 
-    def get_total(self):
+    def get_total(self) -> float:
         total = sum([order.price for order in self.orders])
         return round(total, 2)
 
