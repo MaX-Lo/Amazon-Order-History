@@ -1,12 +1,15 @@
 """
 contains file handling related methods
 """
-
+# pylint: disable=W1203
 import json
+import logging
 import os
-from typing import List
+from typing import List, Iterable
 
 from .data import Order
+
+LOGGER = logging.getLogger(__name__)
 
 
 def remove_file(file_name: str) -> bool:
@@ -18,7 +21,7 @@ def remove_file(file_name: str) -> bool:
         return False
 
     os.remove(path)
-    print(f"{file_name} removed")
+    LOGGER.info(f"{file_name} removed")
     return True
 
 
@@ -39,7 +42,7 @@ def load_password(file_name: str = 'pw.txt') -> str:
     """ reads the password files content """
     path = to_file_path(file_name)
     if not os.path.exists(path):
-        print(f"Password file not found")
+        LOGGER.warning(f"Password file not found")
         return ""
 
     with open(path) as file:
@@ -54,15 +57,15 @@ def save_file(file_name: str, data: str) -> None:
         file.write(data)
 
 
-def read_json_file(file_name: str) -> object:
+def read_json_file(file_name: str) -> Iterable:
     """ :returns a json object based on the file content under file_name"""
     path = to_file_path(file_name)
     if not os.path.exists(path):
-        print(f"{file_name} not found")
-        return ""
+        LOGGER.warning(f"{file_name} not found")
+        return []
 
     with open(path) as file:
-        return json.load(file)
+        return iter(json.load(file))
 
 
 def to_file_path(file_name: str) -> str:

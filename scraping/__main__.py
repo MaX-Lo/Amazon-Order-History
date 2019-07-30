@@ -4,6 +4,8 @@ Projects entry point providing command parsing
 
 # pylint: disable=R0913
 import datetime
+import logging
+import sys
 from typing import Optional
 
 import click
@@ -17,7 +19,7 @@ from .Scraper import Scraper
 @click.group()
 def main() -> None:
     """ main entry point of the application """
-    pass
+    setup_logger()
 
 
 @main.command()
@@ -47,12 +49,21 @@ def scrape(email: str, password: Optional[str], headless: bool, start: int, end:
     """ starts the scraping process and collects all data """
     try:
         Scraper(email, password, bool(headless), start, end, extensive)
-    except PasswordFileNotFound:
+    except (PasswordFileNotFound, LoginError):
         exit(1)
-    except LoginError:
-        exit(1)
-    #except AssertionError:
-    #    exit(1)
+
+
+def setup_logger() -> None:
+    """ Setup the logging configuration """
+    logging.basicConfig(level=logging.INFO)
+    # ToDo replace hardcoded package name, __name__ doesn't work since it contains __main__ if executed as such
+    root_logger = logging.getLogger("scraping")
+    handler = logging.StreamHandler(stream=sys.stdout)
+    formatter = logging.Formatter("[%(asctime)s - %(levelname)s - %(name)s] %(message)s")
+    handler.setFormatter(formatter)
+    root_logger.handlers.clear()
+    root_logger.addHandler(handler)
+    root_logger.setLevel(logging.INFO)
 
 
 if __name__ == '__main__':

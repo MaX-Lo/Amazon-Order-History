@@ -5,6 +5,7 @@ defines a CLI for the project
 from __future__ import annotations
 
 import datetime
+import logging
 from cmd import Cmd
 from typing import Tuple, List, Dict, Any
 
@@ -19,8 +20,11 @@ class Cli(Cmd):
     CLI interface for the scraping module
     """
 
-    def __init__(self) -> Cli:
+    def __init__(self) -> None:
         super().__init__()
+
+        logger = logging.getLogger(__name__)
+
         self.prompt: str = "Scraping >> "
         self.SCRAPING_OPTIONS: List[Tuple[str, OptionType, ArgumentType]] = [
             ('email', OptionType.REQUIRED, ArgumentType.SINGLE_STRING),
@@ -32,18 +36,19 @@ class Cli(Cmd):
 
         self.cmdloop()
 
-    def emptyline(self) -> None:
+    def emptyline(self) -> bool:
         """
         defines what happens on empty line input. If not specified Superclass will rerun last command
         """
-        pass
+        return True
 
-    def default(self, line) -> None:
+    def default(self, line: str) -> bool:
         """
         defines what happens if command not recognized
         :param line: the input line
         """
         print(f'{line} is not a valid option here. See help for more')
+        return True
 
     def preloop(self) -> None:
         """
@@ -55,7 +60,7 @@ class Cli(Cmd):
         print(r'(____/ \___)(__\_)\_/\_/(__)  (__)\_)__) \___/')
         print('================================================')
 
-    def completedefault(self, *ignored) -> List[str]:
+    def completedefault(self, *ignored: List[str]) -> List[str]:
         """
         auto completion default
         :param ignored: ignored params
@@ -73,7 +78,7 @@ class Cli(Cmd):
             print("Starting to scrape...\n")
             try:
                 Scraper(email=args_dict['email'], password=args_dict['password'], headless=args_dict['headless'],
-                        start_year=args_dict['start'], end_year=args_dict['end'], extensive=True)
+                        start=args_dict['start'], end=args_dict['end'], extensive=True)
             except LoginError:
                 pass
             except PasswordFileNotFound:

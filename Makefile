@@ -5,7 +5,7 @@ type_check:
 	python3 -m mypy scraping
 
 lint:
-	pylint scraping
+	python3 -m pylint scraping
 
 scrape:
 	python3 -m scraping scrape --email abc@de.xy

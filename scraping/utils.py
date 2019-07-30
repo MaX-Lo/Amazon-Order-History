@@ -1,8 +1,10 @@
 """
 helper functions
 """
-import datetime
+# pylint: disable=W1203
 
+import datetime
+import logging
 from collections import OrderedDict
 from enum import Enum
 from typing import List, Dict
@@ -12,6 +14,10 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.webdriver import WebDriver
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.wait import WebDriverWait
+
+
+MONTHS: List[str] = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober',
+                     'November', 'Dezember']
 
 
 class OptionType(Enum):
@@ -33,13 +39,11 @@ class ArgumentType(Enum):
     MULTI_INT = 4
 
 
-MONTHS: List[str] = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober',
-                     'November', 'Dezember']
+LOGGER = logging.getLogger(__name__)
 
 
 def is_int_parsable(int_str: str) -> bool:
     """
-
     :param int_str: the string value that shall be parsed
     :return: if it was parseable
     """
@@ -77,21 +81,21 @@ def wait_for_element_by_class_name(browser: WebDriver, class_name: str, timeout:
         WebDriverWait(browser, timeout).until(ec.presence_of_element_located((By.CLASS_NAME, class_name)))
         return True
     except TimeoutException:
-        print(f'Skipping, loading took too much time! (>{timeout}sec)')
+        LOGGER.warning(f'Skipping, loading for "{class_name}" too much time! (>{timeout}sec)')
         return False
 
 
-def wait_for_element_by_id(browser: WebDriver, order_id: object, timeout: object = 3) -> bool:
+def wait_for_element_by_id(browser: WebDriver, element_id: object, timeout: object = 3) -> bool:
     """
     wait the specified timout for a element to load
 
     :return True if element was found in the given timeout and False otherwise
     """
     try:
-        WebDriverWait(browser, timeout).until(ec.presence_of_element_located((By.ID, order_id)))
+        WebDriverWait(browser, timeout).until(ec.presence_of_element_located((By.ID, element_id)))
         return True
     except TimeoutException:
-        print(f'Skipping, loading for {order_id} took too much time! (>{timeout}sec)')
+        LOGGER.warning(f'Skipping, loading for "{element_id}" took too much time! (>{timeout}sec)')
         return False
 
 

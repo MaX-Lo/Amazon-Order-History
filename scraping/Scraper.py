@@ -7,7 +7,7 @@ downloads and parses the data from amazon.de to store it in a orders.json file
 
 import datetime
 import json
-from dataclasses import dataclass
+import logging
 from typing import List, Tuple, Optional, Dict
 import time
 
@@ -25,49 +25,41 @@ from . import utils as ut
 FILE_NAME: str = "orders.json"
 
 
-@dataclass
 class Scraper:
     """
     Scrapping instance, scrapes all Orders in the given year range and outputs it into FILE_NAME
     """
-    email: str
-    password: Optional[str]
-    headless: bool
-    start_year: int
-    end_year: int
-    extensive: bool
+    def __init__(self, email: str, password: Optional[str], headless: bool, start: int, end: int, extensive: bool) -> None:
+        assert email, "no E-Mail provided"
+        assert '@' in email and '.' in email, "incorrect email layout"  # Todo replace by regex
+        assert start <= end, "start year must be before end year"
+        assert end >= 2010, "Amazon order history works only for years after 2009"
+        assert end <= datetime.datetime.now().year, "End year can not be in the future"
 
-    def __post_init__(self) -> None:
-        assert self.email, "no email provided"
-        assert '@' in self.email and '.' in self.email, "no correct email layout"
-        assert self.start_year <= self.end_year, "start year must be before end year"
-        assert self.start_year >= 2010, "Amazon order history works only for years after 2009"
-        assert self.end_year <= datetime.datetime.now().year, "End year can not be in the future"
+        self.logger = logging.getLogger(__name__)
+
+        self.email = email
+        self. password = password if password else file_handler.load_password()
+        if not self.password:
+            self.logger.error("Password not given nor pw.txt found")
+            raise PasswordFileNotFound
+
+        self.start_date: datetime.date = datetime.date(year=start, month=1, day=1)
+        self.end_date: datetime.date = datetime.datetime.now().date() if end == datetime.datetime.now().year \
+            else datetime.date(year=end, month=12, day=31)
+
+        self.headless = headless
+        self.extensive = extensive
+
 
         self.orders: List[Order] = []
         self.browser: WebDriver
-        self.start_date: datetime.date = datetime.date(year=self.start_year, month=1, day=1)
-        self.end_date: datetime.date = datetime.datetime.now().date() if self.end_year == datetime.datetime.now().year \
-            else datetime.date(year=self.end_year, month=12, day=31)
 
-        self._get_password()
         self._setup_scraping()
         self._get_orders()
 
         file_handler.save_file(FILE_NAME, json.dumps([order.to_dict() for order in self.orders]))
         self.browser.quit()
-
-    def _get_password(self) -> None:
-        """
-        checks if the password was given or if the pw.txt file exists and contains a password
-        :raises: PasswordFileNotFound exception if none of these cases appear
-        :return:
-        """
-        if not self.password:
-            self.password = file_handler.load_password()
-            if not self.password:
-                print("Password not given nor pw.txt found")
-                raise PasswordFileNotFound
 
     def _setup_scraping(self) -> None:
         """
@@ -84,12 +76,12 @@ class Scraper:
         opts = Options()
         opts.headless = self.headless
         if opts.headless:
-            print("Run in headless mode.")
+            self.logger.info("Run in headless mode.")
         self.browser = Firefox(options=opts, firefox_profile=firefox_profile)
         self._navigate_to_orders_page()
         self._complete_sign_in_form()
         if not self._signed_in_successful():
-            print("Couldn't sign in. Maybe your credentials are incorrect?")
+            self.logger.error("Couldn't sign in. Maybe your credentials are incorrect?")
             self.browser.quit()
             raise LoginError
         self._skip_adding_phone_number()
@@ -115,20 +107,20 @@ class Scraper:
             sign_in_input = self.browser.find_element_by_id('signInSubmit')
             sign_in_input.click()
         except NoSuchElementException:
-            print("Error while trying to sign in, couldn't find all needed form elements")
+            self.logger.error("Error while trying to sign in, couldn't find all needed form elements")
 
     def _signed_in_successful(self) -> bool:
         """ simple check if we are still on the login page """
-        return self.browser.current_url != 'https://www.amazon.de/ap/signin'
+        return bool(self.browser.current_url != "https://www.amazon.de/ap/signin")
 
     def _skip_adding_phone_number(self) -> None:
         """ find and click the 'skip adding phone number' button if found on the current page """
         try:
             skip_adding_phone_link = self.browser.find_element_by_id('ap-account-fixup-phone-skip-link')
             skip_adding_phone_link.click()
-            print('skipped adding phone number')
+            self.logger.info('skipped adding phone number')
         except NoSuchElementException:
-            print('no need to skip adding phone number')
+            self.logger.info('no need to skip adding phone number')
 
     def _is_custom_date_range(self) -> bool:
         """
@@ -136,14 +128,14 @@ class Scraper:
         :param end: end date
         :return: whether the maximum date range is used or a custom user set range
         """
-        return self.start_year != 2010 or self.end_year != datetime.datetime.now().year
+        return self.start_date.year != 2010 or self.end_date.year != datetime.datetime.now().year
 
     def _are_orders_for_year_available(self) -> bool:
         """
         checks if there are any orders in the current selected year
         :return: True if there were orders, False if not
         """
-        return self.browser.page_source.find('keine Bestellungen aufgegeben') == -1 # No error!
+        return bool(self.browser.page_source.find('keine Bestellungen aufgegeben') == -1)  # No error!
 
     def _is_next_page_available(self) -> bool:
         """
@@ -181,13 +173,10 @@ class Scraper:
         """
         if self._is_custom_date_range():
             file_handler.remove_file(FILE_NAME)
-            data = None
         else:
-            data = file_handler.read_json_file(FILE_NAME)
+            self.orders = file_handler.load_orders(FILE_NAME)
 
-        if data:
-            for order_dict in data:
-                self.orders.append(Order.from_dict(order_dict))
+        if self.orders:
             self._scrape_partial()
         else:
             self._scrape_complete()
@@ -247,7 +236,7 @@ class Scraper:
         start_time = time.time()
         orders: List[Order] = []
         # order filter option 0 and 1 are already contained in option 2 [3months, 6months, currYear, lastYear, ...]
-        start_index = 2 + (datetime.datetime.now().year - self.end_year)
+        start_index = 2 + (datetime.datetime.now().year - self.end_date.year)
         end_index = 2 + (datetime.datetime.now().year - start_date.year) + 1
 
         for order_filter_index in range(start_index, end_index):
@@ -374,12 +363,11 @@ class Scraper:
 
             od_shipments_element = self.browser.find_element_by_class_name('od-shipments')
             price_fields: List[WebElement] = od_shipments_element.find_elements_by_class_name('a-color-price')
-            print([self._price_str_to_float(price.text) for price in price_fields])
             item_price = self._price_str_to_float(price_fields[item_index].text)
 
         except (NoSuchElementException, ValueError):
             item_price = 0
-            print(f'Could not parse price for order:\n{order_element.text}')
+            self.logger.warning(f'Could not parse price for order:\n{order_element.text}')
 
         finally:
             self.browser.close()
@@ -454,12 +442,12 @@ class Scraper:
     def _print_progress(self, orders: List[Order], start_year: int, current_year: int,
                         scraping_start_time: float) -> None:
         """ prints the progress to console and the approximated time to finish """
-        already_scraped_years = self.end_year - current_year + 1
+        already_scraped_years = self.end_date.year - current_year + 1
         years_ahead = current_year - start_year
 
         average_orders_per_year = len(orders) / already_scraped_years
         orders_to_do = years_ahead * average_orders_per_year
-        orders_percentage = len(orders) / (len(orders) + orders_to_do) * 100
+        orders_percentage = round(len(orders) / (len(orders) + orders_to_do) * 100, 2)
 
         time_passed = time.time() - scraping_start_time
         average_time_per_year = time_passed / already_scraped_years
