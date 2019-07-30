@@ -17,6 +17,7 @@ from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 
+from scraping.CustomExceptions import PasswordFileNotFound, LoginError
 from . import file_handler
 from .data import Order, Item
 from . import utils as ut
@@ -59,14 +60,14 @@ class Scraper:
     def _get_password(self) -> None:
         """
         checks if the password was given or if the pw.txt file exists and contains a password
-        Exit(1) if none of these cases appear
+        :raises: PasswordFileNotFound exception if none of these cases appear
         :return:
         """
         if not self.password:
             self.password = file_handler.load_password()
             if not self.password:
                 print("Password not given nor pw.txt found")
-                exit(1)
+                raise PasswordFileNotFound
 
     def _setup_scraping(self) -> None:
         """
@@ -74,6 +75,7 @@ class Scraper:
             - setting up the WebDrive
             - log in the user with the given credentials
             - skipping the adding phone number dialog (should it appear)
+        :raise LoginError if not possible to login
          """
         firefox_profile = FirefoxProfile()
         firefox_profile.set_preference("browser.tabs.remote.autostart", False)
@@ -89,7 +91,7 @@ class Scraper:
         if not self._signed_in_successful():
             print("Couldn't sign in. Maybe your credentials are incorrect?")
             self.browser.quit()
-            exit(1)
+            raise LoginError
         self._skip_adding_phone_number()
 
     def _navigate_to_orders_page(self) -> None:
@@ -171,12 +173,11 @@ class Scraper:
         except NoSuchElementException:
             return False
 
-    def _get_orders(self):
+    def _get_orders(self) -> None:
         """
         get a list of all orders in the given range (start and end year inclusive)
         to save network capacities it is checked if some orders got already fetched earlier in 'orders.json'
 
-        :returns: List of all Orders
         """
         if self._is_custom_date_range():
             file_handler.remove_file(FILE_NAME)

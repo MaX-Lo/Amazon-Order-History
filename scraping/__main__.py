@@ -8,6 +8,8 @@ from typing import Optional
 
 import click
 
+from scraping.CustomExceptions import PasswordFileNotFound, LoginError
+from scraping.cli import Cli
 from . import dash_app
 from .Scraper import Scraper
 
@@ -19,11 +21,18 @@ def main() -> None:
 
 
 @main.command()
+def cli() -> None:
+    """starts the CLI"""
+    Cli()
+
+
+@main.command()
 def dash() -> None:
     """ creates a dash app to visualize the evaluated scraping output """
     dash_app.main()
 
-#@click.option("--password", required=False, default=None, hide_input=True, prompt=True, help="the users password")
+
+# @click.option("--password", required=False, default=None, hide_input=True, prompt=True, help="the users password")
 @main.command()
 @click.option("--email", required=True, help="The users email address")
 @click.option("--password", required=False, default=None, help="the users password")
@@ -36,7 +45,14 @@ def dash() -> None:
               help="if set to False categorization for items isn't available, but scraping itself should be faster")
 def scrape(email: str, password: Optional[str], headless: bool, start: int, end: int, extensive: bool) -> None:
     """ starts the scraping process and collects all data """
-    Scraper(email, password, bool(headless), start, end, extensive)
+    try:
+        Scraper(email, password, bool(headless), start, end, extensive)
+    except PasswordFileNotFound:
+        exit(1)
+    except LoginError:
+        exit(1)
+    #except AssertionError:
+    #    exit(1)
 
 
 if __name__ == '__main__':

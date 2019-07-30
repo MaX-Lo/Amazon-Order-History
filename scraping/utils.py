@@ -4,6 +4,7 @@ helper functions
 import datetime
 
 from collections import OrderedDict
+from enum import Enum
 from typing import List, Dict
 
 from selenium.common.exceptions import TimeoutException
@@ -12,8 +13,41 @@ from selenium.webdriver.firefox.webdriver import WebDriver
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.wait import WebDriverWait
 
+
+class OptionType(Enum):
+    """
+    Enum if an argument is required or optional
+    """
+    REQUIRED = 1
+    OPTIONAL = 0
+
+
+class ArgumentType(Enum):
+    """
+    Enum for arguments
+    """
+    FLAG = 1
+    SINGLE_STRING = 0
+    MULTI_STRING = 2
+    SINGLE_INT = 3
+    MULTI_INT = 4
+
+
 MONTHS: List[str] = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober',
                      'November', 'Dezember']
+
+
+def is_int_parsable(int_str: str) -> bool:
+    """
+
+    :param int_str: the string value that shall be parsed
+    :return: if it was parseable
+    """
+    try:
+        int(int_str)
+        return True
+    except ValueError:
+        return False
 
 
 def str_to_date(date_str: str) -> datetime.date:

@@ -10,6 +10,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 import plotly.graph_objs as go
 
+from scraping.CustomExceptions import OrdersNotFound
 from scraping.evaluation import Evaluation
 from . import evaluation
 from . import file_handler as fh
@@ -28,6 +29,8 @@ def main() -> None:
     app = dash.Dash(__name__)
 
     orders = fh.load_orders()
+    if not orders:
+        raise OrdersNotFound
     evaluated = evaluation.Evaluation(orders)
 
     app.layout = html.Div(
