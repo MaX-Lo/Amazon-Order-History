@@ -11,7 +11,7 @@ import sys
 
 from cmd import Cmd
 from termcolor import colored
-from typing import Tuple, List, Dict, Any
+from typing import Tuple, List, Dict, Any, Callable
 
 from scraping import dash_app, utils
 from scraping.CustomExceptions import LoginError, PasswordFileNotFound, OrdersNotFound
@@ -54,17 +54,18 @@ class Cli(Cmd):
         :param line: the input line
         """
         print(f'{line} is not a valid option here. See help for more')
-        return True
 
     def preloop(self) -> None:
         """
         Little Banner presented on CLI start :)
         """
+        print()
         print('================================================')
         print(r'/ ___) / __)(  _ \ / _\ (  _ \(  )(  ( \ / __)')
         print(r'\___ \( (__  )   //    \ ) __/ )( /    /( (_ \\')
         print(r'(____/ \___)(__\_)\_/\_/(__)  (__)\_)__) \___/')
         print('================================================')
+        print()
 
     def completedefault(self, *ignored: List[str]) -> List[str]:
         """
@@ -83,14 +84,14 @@ class Cli(Cmd):
         if self._scrape_check_args(args_dict):
             print("Starting to scrape...\n")
             try:
+                progress_callback: Callable[[float], None] = lambda progress: self._print_progress_bar(int(progress*100)
+                                                                                                       , 100)
                 with Spinner():
+                    self._print_progress_bar(0, 100)
                     Scraper(email=args_dict['email'], password=args_dict['password'], headless=args_dict['headless'],
-                            start=args_dict['start'], end=args_dict['end'], extensive=True)
-            except LoginError:
-                pass
-            except PasswordFileNotFound:
-                pass
-            except AssertionError:
+                            start=args_dict['start'], end=args_dict['end'], extensive=True,
+                            progress_observer_callback=progress_callback)
+            except (LoginError, PasswordFileNotFound, AssertionError):
                 pass
 
     def complete_scrape(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
@@ -156,20 +157,24 @@ class Cli(Cmd):
         """
         is_valid = True
         if not self._are_all_req_args_given(self.SCRAPING_OPTIONS, args):
-            is_valid = is_valid and False
+            is_valid = False
         if not self._are_all_rec_args_accepted(self.SCRAPING_OPTIONS, args):
-            is_valid = is_valid and False
+            is_valid = False
         if not self._check_args_value_count(self.SCRAPING_OPTIONS, args):
-            is_valid = is_valid and False
+            is_valid = False
 
         if 'email' in args.keys():
             email: str = args['email']
             if '@' not in email or '.' not in email:
-                print(f'Email is not in valid format: {email}')
-                is_valid = is_valid and False
+                print(colored(f'Email is not in valid format: {email}', 'red'))
+                is_valid = False
 
         if 'headless' in args.keys() and 'no-headless' in args.keys():
-            is_valid = is_valid and False
+            is_valid = False
+
+        if ('start' in args.keys() and 'end' in args.keys()) and args['start'] > args['end']:
+            print(colored(f'start value ({args["start"]}) can\'t be larger than end value ({args["end"]})', 'red'))
+            is_valid = False
 
         args['end'] = args['end'] if 'end' in args.keys() else datetime.datetime.now().year
         args['start'] = args['start'] if 'start' in args.keys() else 2010
@@ -283,8 +288,8 @@ class Cli(Cmd):
         return args_dict
 
     @staticmethod
-    def _print_progressBar(iteration: int, total: int, prefix: str = '', suffix: str = '', decimals: int = 1,
-                           length: int = 100, fill: str = '█'):
+    def _print_progress_bar(iteration: int, total: int, prefix: str = '', suffix: str = '', decimals: int = 1,
+                           length: int = 90, fill: str = '█'):
         """
         Call in a loop to create terminal progress bar
         @params:
@@ -302,4 +307,4 @@ class Cli(Cmd):
         print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end='\r')
         # Print New Line on Complete
         if iteration == total:
-            print()
+            print('\n\n')

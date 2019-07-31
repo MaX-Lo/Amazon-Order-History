@@ -62,8 +62,9 @@ def setup_logger() -> None:
     formatter = logging.Formatter("[%(asctime)s - %(levelname)s - %(name)s] %(message)s")
     handler.setFormatter(formatter)
     root_logger.handlers.clear()
-    root_logger.addHandler(handler)
+    #root_logger.addHandler(handler)
     root_logger.setLevel(logging.INFO)
+    #root_logger.propagate = False
 
 
 if __name__ == '__main__':

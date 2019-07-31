@@ -24,10 +24,10 @@ class Spinner:
 
     def spinner_task(self) -> None:
         while self.busy:
-            sys.stdout.write(next(self.spinner_generator))
+            sys.stdout.write(next(self.spinner_generator) + '  ')
             sys.stdout.flush()
             time.sleep(self.delay)
-            sys.stdout.write('\b')
+            sys.stdout.write('\b\b\b')
             sys.stdout.flush()
 
     def __enter__(self) -> None:

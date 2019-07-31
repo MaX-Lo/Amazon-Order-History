@@ -8,7 +8,7 @@ downloads and parses the data from amazon.de to store it in a orders.json file
 import datetime
 import json
 import logging
-from typing import List, Tuple, Optional, Dict
+from typing import List, Tuple, Optional, Dict, Any, Callable
 import time
 
 from selenium.common.exceptions import NoSuchElementException
@@ -30,7 +30,9 @@ class Scraper:
     """
     Scrapping instance, scrapes all Orders in the given year range and outputs it into FILE_NAME
     """
-    def __init__(self, email: str, password: Optional[str], headless: bool, start: int, end: int, extensive: bool) -> None:
+
+    def __init__(self, email: str, password: Optional[str], headless: bool, start: int, end: int, extensive: bool,
+                 progress_observer_callback: Callable[[float], None] = None) -> None:
         assert email, "no E-Mail provided"
         assert '@' in email and '.' in email, "incorrect email layout"  # Todo replace by regex
         assert start <= end, "start year must be before end year"
@@ -38,9 +40,10 @@ class Scraper:
         assert end <= datetime.datetime.now().year, "End year can not be in the future"
 
         self.logger = logging.getLogger(__name__)
+        self.progress_observer_callback: Callable[[float], None] = progress_observer_callback
 
         self.email = email
-        self. password = password if password else file_handler.load_password()
+        self.password = password if password else file_handler.load_password()
         if not self.password:
             self.logger.error(colored("Password not given nor pw.txt found", 'red'))
             raise PasswordFileNotFound
@@ -52,7 +55,6 @@ class Scraper:
         self.headless = headless
         self.extensive = extensive
 
-
         self.orders: List[Order] = []
         self.browser: WebDriver
 
@@ -62,7 +64,9 @@ class Scraper:
         file_handler.save_file(FILE_NAME, json.dumps([order.to_dict() for order in self.orders]))
         self.browser.quit()
 
-    
+    def _notify_progress_observers(self, progress: float) -> None:
+        if self.progress_observer_callback:
+            self.progress_observer_callback(progress)
 
     def _setup_scraping(self) -> None:
         """
@@ -238,7 +242,6 @@ class Scraper:
         """
         :returns: a list of all orders in between given start year (inclusive) and end year (inclusive)
         """
-        start_time = time.time()
         orders: List[Order] = []
         # order filter option 0 and 1 are already contained in option 2 [3months, 6months, currYear, lastYear, ...]
         start_index = 2 + (datetime.datetime.now().year - self.end_date.year)
@@ -261,7 +264,11 @@ class Scraper:
                 orders_on_page: List[Order] = self._scrape_page_for_orders()
                 orders.extend(orders_on_page)
 
-                if orders_on_page and start_date > orders_on_page[-1].date:
+                current_date: datetime.date = orders_on_page[-1].date
+                progress: float = self._get_progress(start_date=start_date, current_date=current_date)
+                self._notify_progress_observers(progress)
+
+                if orders_on_page and start_date > current_date:
                     break
                 if self._is_paging_menu_available():
                     pagination_element = self.browser.find_element_by_class_name('a-pagination')
@@ -273,9 +280,7 @@ class Scraper:
                     next_page_link = pagination_element.find_element_by_class_name('a-last') \
                         .find_element_by_css_selector('a').get_attribute('href')
                     self.browser.get(next_page_link)
-            current_year = datetime.datetime.now().year + 2 - order_filter_index
-            self._print_progress(orders=orders, start_year=start_date.year, current_year=current_year,
-                                 scraping_start_time=start_time)
+
         return orders
 
     def _scrape_page_for_orders(self) -> List[Order]:
@@ -444,20 +449,12 @@ class Scraper:
         """
         return float((price_str[4:]).replace(',', '.'))
 
-    def _print_progress(self, orders: List[Order], start_year: int, current_year: int,
-                        scraping_start_time: float) -> None:
-        """ prints the progress to console and the approximated time to finish """
-        already_scraped_years = self.end_date.year - current_year + 1
-        years_ahead = current_year - start_year
-
-        average_orders_per_year = len(orders) / already_scraped_years
-        orders_to_do = years_ahead * average_orders_per_year
-        orders_percentage = round(len(orders) / (len(orders) + orders_to_do) * 100, 2)
-
-        time_passed = time.time() - scraping_start_time
-        average_time_per_year = time_passed / already_scraped_years
-        end_time = time.time() + average_time_per_year * years_ahead
-        approximated_time_to_end = end_time - scraping_start_time
-        print_time = str(datetime.timedelta(seconds=approximated_time_to_end))
-
-        print(f'Finished {current_year} / {orders_percentage}%. Approximately finished in {print_time}')
+    def _get_progress(self, start_date: datetime.date, current_date: datetime.date) -> float:
+        """
+        calculates the progress by months
+        :returns the progress in percentage
+        """
+        total_months = self.end_date.month - start_date.month + (self.end_date.year - start_date.year) * 12
+        scraped_months = self.end_date.month - current_date.month + (self.end_date.year - current_date.year) * 12
+        progress: float = scraped_months / total_months
+        return progress if progress <= 1 else 1.0
