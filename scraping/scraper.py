@@ -456,5 +456,5 @@ class Scraper:
         """
         total_months = self.end_date.month - start_date.month + (self.end_date.year - start_date.year) * 12
         scraped_months = self.end_date.month - current_date.month + (self.end_date.year - current_date.year) * 12
-        progress: float = scraped_months / total_months
+        progress: float = scraped_months / total_months if total_months > 0 else 1.0
         return progress if progress <= 1 else 1.0

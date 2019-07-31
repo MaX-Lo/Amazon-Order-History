@@ -7,6 +7,7 @@ from __future__ import annotations
 import datetime
 import itertools
 import logging
+import os
 import sys
 
 from cmd import Cmd
@@ -27,7 +28,6 @@ class Cli(Cmd):
 
     def __init__(self) -> None:
         super().__init__()
-
         logger = logging.getLogger(__name__)
         self.spinner = itertools.cycle(['-', '/', '|', '\\'])
 
@@ -46,7 +46,7 @@ class Cli(Cmd):
         """
         defines what happens on empty line input. If not specified Superclass will rerun last command
         """
-        return True
+        pass
 
     def default(self, line: str) -> bool:
         """
@@ -59,6 +59,7 @@ class Cli(Cmd):
         """
         Little Banner presented on CLI start :)
         """
+        os.system('clear')
         print()
         print('================================================')
         print(r'/ ___) / __)(  _ \ / _\ (  _ \(  )(  ( \ / __)')
@@ -66,6 +67,12 @@ class Cli(Cmd):
         print(r'(____/ \___)(__\_)\_/\_/(__)  (__)\_)__) \___/')
         print('================================================')
         print()
+
+    def postloop(self) -> None:
+        """
+        clears std.out
+        """
+        os.system('clear')
 
     def completedefault(self, *ignored: List[str]) -> List[str]:
         """
@@ -84,8 +91,9 @@ class Cli(Cmd):
         if self._scrape_check_args(args_dict):
             print("Starting to scrape...\n")
             try:
-                progress_callback: Callable[[float], None] = lambda progress: self._print_progress_bar(int(progress*100)
-                                                                                                       , 100)
+                progress_callback: Callable[[float], None] = lambda progress: self._print_progress_bar(
+                    int(progress * 100)
+                    , 100)
                 with Spinner():
                     self._print_progress_bar(0, 100)
                     Scraper(email=args_dict['email'], password=args_dict['password'], headless=args_dict['headless'],
@@ -289,7 +297,7 @@ class Cli(Cmd):
 
     @staticmethod
     def _print_progress_bar(iteration: int, total: int, prefix: str = '', suffix: str = '', decimals: int = 1,
-                           length: int = 90, fill: str = '█'):
+                            length: int = 90, fill: str = '█'):
         """
         Call in a loop to create terminal progress bar
         @params:
@@ -308,3 +316,58 @@ class Cli(Cmd):
         # Print New Line on Complete
         if iteration == total:
             print('\n\n')
+
+    def cmdloop(self, intro=None) -> None:
+        """Repeatedly issue a prompt, accept input, parse an initial prefix
+        off the received input, and dispatch to action methods, passing them
+        the remainder of the line as argument.
+
+        """
+
+        self.preloop()
+        if self.use_rawinput and self.completekey:
+            try:
+                import readline
+                self.old_completer = readline.get_completer()
+                readline.set_completer(self.complete)
+                readline.parse_and_bind(self.completekey+": complete")
+            except ImportError:
+                pass
+        try:
+            if intro is not None:
+                self.intro = intro
+            if self.intro:
+                self.stdout.write(str(self.intro)+"\n")
+            stop = None
+            while not stop:
+                if self.cmdqueue:
+                    line = self.cmdqueue.pop(0)
+                else:
+                    if self.use_rawinput:
+                        try:
+                            line = input(self.prompt)
+                        except KeyboardInterrupt:
+                            #print('^C')
+                            print()
+                            line = '\n'
+                        except EOFError:
+                            line = 'EOF'
+                    else:
+                        self.stdout.write(self.prompt)
+                        self.stdout.flush()
+                        line = self.stdin.readline()
+                        if not len(line):
+                            line = 'EOF'
+                        else:
+                            line = line.rstrip('\r\n')
+                line = self.precmd(line)
+                stop = self.onecmd(line)
+                stop = self.postcmd(stop, line)
+            self.postloop()
+        finally:
+            if self.use_rawinput and self.completekey:
+                try:
+                    import readline
+                    readline.set_completer(self.old_completer)
+                except ImportError:
+                    pass
