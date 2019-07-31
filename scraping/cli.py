@@ -5,14 +5,18 @@ defines a CLI for the project
 from __future__ import annotations
 
 import datetime
+import itertools
 import logging
+import sys
+
 from cmd import Cmd
 from termcolor import colored
 from typing import Tuple, List, Dict, Any
 
 from scraping import dash_app, utils
 from scraping.CustomExceptions import LoginError, PasswordFileNotFound, OrdersNotFound
-from scraping.Scraper import Scraper
+from scraping.scraper import Scraper
+from scraping.spinner import Spinner
 from scraping.utils import OptionType, ArgumentType
 
 
@@ -25,6 +29,7 @@ class Cli(Cmd):
         super().__init__()
 
         logger = logging.getLogger(__name__)
+        self.spinner = itertools.cycle(['-', '/', '|', '\\'])
 
         self.prompt: str = colored("Scraping >> ", 'cyan')
         self.SCRAPING_OPTIONS: List[Tuple[str, OptionType, ArgumentType]] = [
@@ -78,8 +83,9 @@ class Cli(Cmd):
         if self._scrape_check_args(args_dict):
             print("Starting to scrape...\n")
             try:
-                Scraper(email=args_dict['email'], password=args_dict['password'], headless=args_dict['headless'],
-                        start=args_dict['start'], end=args_dict['end'], extensive=True)
+                with Spinner():
+                    Scraper(email=args_dict['email'], password=args_dict['password'], headless=args_dict['headless'],
+                            start=args_dict['start'], end=args_dict['end'], extensive=True)
             except LoginError:
                 pass
             except PasswordFileNotFound:
@@ -275,3 +281,25 @@ class Cli(Cmd):
             args_dict[arg_tuple[0]] = " ".join(arg_tuple[1:])
 
         return args_dict
+
+    @staticmethod
+    def _print_progressBar(iteration: int, total: int, prefix: str = '', suffix: str = '', decimals: int = 1,
+                           length: int = 100, fill: str = '█'):
+        """
+        Call in a loop to create terminal progress bar
+        @params:
+            iteration   - Required  : current iteration (Int)
+            total       - Required  : total iterations (Int)
+            prefix      - Optional  : prefix string (Str)
+            suffix      - Optional  : suffix string (Str)
+            decimals    - Optional  : positive number of decimals in percent complete (Int)
+            length      - Optional  : character length of bar (Int)
+            fill        - Optional  : bar fill character (Str)
+        """
+        percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+        filledLength = int(length * iteration // total)
+        bar = fill * filledLength + '-' * (length - filledLength)
+        print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end='\r')
+        # Print New Line on Complete
+        if iteration == total:
+            print()

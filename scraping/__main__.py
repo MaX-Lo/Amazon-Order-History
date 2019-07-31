@@ -13,7 +13,7 @@ import click
 from scraping.CustomExceptions import PasswordFileNotFound, LoginError
 from scraping.cli import Cli
 from . import dash_app
-from .Scraper import Scraper
+from .scraper import Scraper
 
 
 @click.group()
@@ -55,20 +55,7 @@ def scrape(email: str, password: Optional[str], headless: bool, start: int, end:
 
 def setup_logger() -> None:
     """ Setup the logging configuration """
-    logging.basicConfig(level=logging.INFO)
-    # ToDo replace hardcoded package name, __name__ doesn't work since it contains __main__ if executed as such
-    root_logger = logging.getLogger("scraping")
-    handler = logging.StreamHandler(stream=sys.stdout)
-    formatter = logging.Formatter("[%(asctime)s - %(levelname)s - %(name)s] %(message)s")
-    handler.setFormatter(formatter)
-    root_logger.handlers.clear()
-    root_logger.addHandler(handler)
-    root_logger.setLevel(logging.INFO)
-
-
-def setup_logger() -> None:
-    """ Setup the logging configuration """
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO, filename='scrape.log', filemode='w')
     # ToDo replace hardcoded package name, __name__ doesn't work since it contains __main__ if executed as such
     root_logger = logging.getLogger("scraping")
     handler = logging.StreamHandler(stream=sys.stdout)

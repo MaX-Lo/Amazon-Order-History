@@ -85,6 +85,7 @@ class Scraper:
         self._complete_sign_in_form()
         if not self._signed_in_successful():
             self.logger.error(colored("Couldn't sign in. Maybe your credentials are incorrect?", 'red'))
+            print(colored("Couldn't sign in. Maybe your credentials are incorrect?", 'red'))
             self.browser.quit()
             raise LoginError
         self._skip_adding_phone_number()
@@ -111,6 +112,7 @@ class Scraper:
             sign_in_input.click()
         except NoSuchElementException:
             self.logger.error(colored("Error while trying to sign in, couldn't find all needed form elements", 'red'))
+            print(colored("Error while trying to sign in, couldn't find all needed form elements", 'red'))
 
     def _signed_in_successful(self) -> bool:
         """ simple check if we are still on the login page """
