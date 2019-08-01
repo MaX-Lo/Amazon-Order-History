@@ -50,6 +50,7 @@ class Scraper:
         self.start_date: datetime.date = datetime.date(year=start, month=1, day=1)
         self.end_date: datetime.date = datetime.datetime.now().date() if end == datetime.datetime.now().year \
             else datetime.date(year=end, month=12, day=31)
+        self.start_scraping_date: datetime.date = datetime.date(year=start, month=1, day=1)
 
         self.headless = headless
         self.extensive = extensive
@@ -222,29 +223,29 @@ class Scraper:
         """
         scrapes all the data without checking for duplicates (when some orders already exist)
         """
-        self.orders = self._scrape_orders(self.start_date)
+        self.orders = self._scrape_orders()
 
     def _scrape_partial(self) -> None:
         """ scrape data until finding duplicates, at which point the scraping can be canceled since the rest
          is already there """
         self.orders = sorted(self.orders, key=lambda order: order.date)
-        last_date = self.orders[-1].date
+        self.start_scraping_date = self.orders[-1].date
 
-        scraped_orders: List[Order] = self._scrape_orders(last_date)
+        scraped_orders: List[Order] = self._scrape_orders()
 
         # check for intersection of fetched orders
         existing_order_ids = list(map(lambda order: order.order_id, self.orders))
         new_orders: List[Order] = list(filter(lambda order: order.order_id not in existing_order_ids, scraped_orders))
         self.orders.extend(new_orders)
 
-    def _scrape_orders(self, start_date: datetime.date) -> List[Order]:
+    def _scrape_orders(self) -> List[Order]:
         """
         :returns: a list of all orders in between given start year (inclusive) and end year (inclusive)
         """
         orders: List[Order] = []
         # order filter option 0 and 1 are already contained in option 2 [3months, 6months, currYear, lastYear, ...]
         start_index = 2 + (datetime.datetime.now().year - self.end_date.year)
-        end_index = 2 + (datetime.datetime.now().year - start_date.year) + 1
+        end_index = 2 + (datetime.datetime.now().year - self.start_scraping_date.year) + 1
 
         for order_filter_index in range(start_index, end_index):
             # open the dropdown
@@ -264,10 +265,8 @@ class Scraper:
                 orders.extend(orders_on_page)
 
                 current_date: datetime.date = orders_on_page[-1].date
-                progress: float = self._get_progress(start_date=start_date, current_date=current_date)
-                self._notify_progress_observers(progress)
 
-                if orders_on_page and start_date > current_date:
+                if orders_on_page and self.start_scraping_date > current_date:
                     break
                 if self._is_paging_menu_available():
                     pagination_element = self.browser.find_element_by_class_name('a-pagination')
@@ -306,6 +305,10 @@ class Scraper:
                     items.append(Item(item_price, link, title, seller, categories))
 
             orders.append(Order(order_id, order_price, date, items))
+
+            current_date: datetime.date = orders[-1].date
+            progress: float = self._get_progress(current_date=current_date)
+            self._notify_progress_observers(progress)
 
         return orders
 
@@ -448,12 +451,16 @@ class Scraper:
         """
         return float((price_str[4:]).replace(',', '.'))
 
-    def _get_progress(self, start_date: datetime.date, current_date: datetime.date) -> float:
+    def _get_progress(self, current_date: datetime.date) -> float:
         """
         calculates the progress by months
         :returns the progress in percentage
         """
-        total_months = self.end_date.month - start_date.month + (self.end_date.year - start_date.year) * 12
-        scraped_months = self.end_date.month - current_date.month + (self.end_date.year - current_date.year) * 12
-        progress: float = scraped_months / total_months if total_months > 0 else 1.0
+        total_days = self.end_date.day - self.start_scraping_date.day + \
+                     (self.end_date.month - self.start_scraping_date.month) * 31 + \
+                     (self.end_date.year - self.start_scraping_date.year) * 12 * 31
+        scraped_days = self.end_date.day - current_date.day + \
+                       (self.end_date.month - current_date.month) * 31 + \
+                       (self.end_date.year - current_date.year) * 12 * 31
+        progress: float = scraped_days / total_days if total_days > 0 else 1.0
         return progress if progress <= 1 else 1.0

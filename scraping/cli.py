@@ -101,8 +101,7 @@ class Cli(Cmd):
             print("Starting to scrape. This may take a while...\n")
             try:
                 progress_callback: Callable[[float], None] = lambda progress: self._print_progress_bar(
-                    int(progress * 100)
-                    , 100)
+                    progress * 100, 100)
                 with Spinner():
                     self._print_progress_bar(0, 100)
                     Scraper(email=args_dict['email'], password=args_dict['password'], headless=args_dict['headless'],
@@ -149,6 +148,7 @@ class Cli(Cmd):
             try:
                 dash_app.main()
             except OrdersNotFound:
+                print(colored('No orders.json found', 'red'))
                 pass
 
     @staticmethod
@@ -308,7 +308,7 @@ class Cli(Cmd):
         return args_dict
 
     @staticmethod
-    def _print_progress_bar(iteration: int, total: int, prefix: str = '', suffix: str = '', decimals: int = 1,
+    def _print_progress_bar(iteration: float, total: int, prefix: str = '', suffix: str = '', decimals: int = 1,
                             length: int = 90, fill: str = '█'):
         """
         Call in a loop to create terminal progress bar
@@ -321,12 +321,12 @@ class Cli(Cmd):
             length      - Optional  : character length of bar (Int)
             fill        - Optional  : bar fill character (Str)
         """
-        percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+        percent = ("{0:." + str(decimals) + "f}").format(round(100 * (iteration / float(total)), decimals))
         filled_length = int(length * iteration // total)
         bar = fill * filled_length + '-' * (length - filled_length)
         print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end='\r')
         # Print New Line on Complete
-        if iteration == total:
+        if int(iteration) == total:
             print('\n\n')
 
     def cmdloop(self, intro=None) -> None:
