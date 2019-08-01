@@ -29,7 +29,8 @@ class Cli(Cmd):
     def __init__(self) -> None:
         super().__init__()
         logger = logging.getLogger(__name__)
-        self.error_flag: bool = False
+
+        self.refresh_cli: bool = False
         self.spinner = itertools.cycle(['-', '/', '|', '\\'])
 
         self.prompt: str = colored("Scraping >> ", 'cyan')
@@ -49,12 +50,12 @@ class Cli(Cmd):
         """
         pass
 
-    def default(self, line: str) -> bool:
+    def default(self, line: str) -> None:
         """
         defines what happens if command not recognized
         :param line: the input line
         """
-        self.error_flag = True
+        self.refresh_cli = False
         print(f'{line} is not a valid option here. See help for more')
 
     def preloop(self) -> None:
@@ -77,9 +78,9 @@ class Cli(Cmd):
         os.system('clear')
 
     def postcmd(self, stop: bool, line: str) -> bool:
-        if not self.error_flag:
+        if self.refresh_cli:
             self.preloop()
-        self.error_flag = False
+        self.refresh_cli = True
         return stop
 
     def completedefault(self, *ignored: List[str]) -> List[str]:
@@ -97,7 +98,7 @@ class Cli(Cmd):
         """
         args_dict: Dict[str, Any] = self._get_args(line)
         if self._scrape_check_args(args_dict):
-            print("Starting to scrape...\n")
+            print("Starting to scrape. This may take a while...\n")
             try:
                 progress_callback: Callable[[float], None] = lambda progress: self._print_progress_bar(
                     int(progress * 100)
@@ -109,6 +110,7 @@ class Cli(Cmd):
                             progress_observer_callback=progress_callback)
             except (LoginError, PasswordFileNotFound, AssertionError):
                 pass
+        self.refresh_cli = False
 
     def complete_scrape(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """
@@ -197,7 +199,6 @@ class Cli(Cmd):
         args['password'] = args['password'] if 'password' in args.keys() else ""
         args['headless'] = True if 'headless' in args.keys() else False
 
-        self.error_flag = not is_valid
         return is_valid
 
     @staticmethod
@@ -321,8 +322,8 @@ class Cli(Cmd):
             fill        - Optional  : bar fill character (Str)
         """
         percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
-        filledLength = int(length * iteration // total)
-        bar = fill * filledLength + '-' * (length - filledLength)
+        filled_length = int(length * iteration // total)
+        bar = fill * filled_length + '-' * (length - filled_length)
         print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end='\r')
         # Print New Line on Complete
         if iteration == total:
@@ -358,7 +359,7 @@ class Cli(Cmd):
                         try:
                             line = input(self.prompt)
                         except KeyboardInterrupt:
-                            self.error_flag = True
+                            self.refresh_cli = False
                             print('^C')
                             # print()
                             line = '\n'

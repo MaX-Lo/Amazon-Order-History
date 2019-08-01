@@ -55,16 +55,16 @@ def scrape(email: str, password: Optional[str], headless: bool, start: int, end:
 
 def setup_logger() -> None:
     """ Setup the logging configuration """
-    logging.basicConfig(level=logging.INFO, filename='scrape.log', filemode='w')
+
+    handler = logging.FileHandler(filename='scrape.log', mode='w')
+    formatter = logging.Formatter("[%(asctime)s - %(levelname)s \t- %(name)s]\t %(message)s")
+    handler.setFormatter(formatter)
+
     # ToDo replace hardcoded package name, __name__ doesn't work since it contains __main__ if executed as such
     root_logger = logging.getLogger("scraping")
-    handler = logging.StreamHandler(stream=sys.stdout)
-    formatter = logging.Formatter("[%(asctime)s - %(levelname)s - %(name)s] %(message)s")
-    handler.setFormatter(formatter)
     root_logger.handlers.clear()
-    #root_logger.addHandler(handler)
+    root_logger.addHandler(handler)
     root_logger.setLevel(logging.INFO)
-    #root_logger.propagate = False
 
 
 if __name__ == '__main__':
