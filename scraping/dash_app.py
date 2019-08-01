@@ -3,13 +3,19 @@
 # pylint: disable=C0330
 
 import copy
+import logging
+import time
 from typing import Dict
+from multiprocessing import Process
 
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
 import plotly.graph_objs as go
+from dash import Dash
+from termcolor import colored
 
+from scraping import utils
 from scraping.CustomExceptions import OrdersNotFound
 from scraping.evaluation import Evaluation
 from . import evaluation
@@ -24,9 +30,11 @@ LAYOUT = dict(
     legend=dict(font=dict(size=10), orientation="h"),
 )
 
+LOGGER: logging.Logger = logging.getLogger(__name__)
+
 
 def main() -> None:
-    app = dash.Dash(__name__)
+    app: Dash = Dash(__name__)
 
     orders = fh.load_orders()
     if not orders:
@@ -55,7 +63,19 @@ def main() -> None:
         id="mainContainer"
     )
 
-    app.run_server(debug=True)
+    run_server(app)
+
+
+def run_server(app: Dash) -> None:
+    server_process: Process = Process(target=app.run_server)
+    server_process.daemon = True
+    server_process.start()
+    LOGGER.info(colored(f'Dash server process started. PID: {server_process.pid}', 'blue'))
+    time.sleep(0.1)
+    webbrowser_process: Process = Process(target=utils.open_webbrowser, kwargs={'url': 'http://127.0.0.1:8050/'})
+    webbrowser_process.daemon = True
+    webbrowser_process.start()
+    LOGGER.info(colored(f'Webbrowser process started. PID: {webbrowser_process.pid}', 'blue'))
 
 
 def head() -> html.Div:

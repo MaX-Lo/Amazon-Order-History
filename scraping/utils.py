@@ -5,6 +5,8 @@ helper functions
 
 import datetime
 import logging
+import os
+import webbrowser
 from collections import OrderedDict
 from enum import Enum
 from typing import List, Dict
@@ -115,3 +117,28 @@ def sort_dict_by_key(dic: Dict) -> OrderedDict:
         return_dict[key] = dic[key]
 
     return return_dict
+
+
+def open_webbrowser(url: str) -> None:
+    """
+    Opens a webbrowser and redirects the stdout and stderr. This is because they will occupy the stdout/stderr
+    as long as the webbrowser is open
+    :param self:
+    :param url: the url to open
+    """
+    _stderr: int = os.dup(2)
+    os.close(2)
+    _stdout: int = os.dup(1)
+    os.close(1)
+    fd: int = os.open(os.devnull, os.O_RDWR)
+    os.dup2(fd, 2)
+    os.dup2(fd, 1)
+    try:
+        webbrowser.open(url)
+        LOGGER.info(colored(f'webbrowser successfully opened {url}', 'blue'))
+    finally:
+        os.close(fd)
+        os.dup2(_stderr, 2)
+        os.dup2(_stdout, 1)
+        os.close(_stderr)
+        os.close(_stdout)

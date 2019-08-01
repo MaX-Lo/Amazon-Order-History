@@ -29,6 +29,7 @@ class Cli(Cmd):
     def __init__(self) -> None:
         super().__init__()
         logger = logging.getLogger(__name__)
+        self.error_flag: bool = False
         self.spinner = itertools.cycle(['-', '/', '|', '\\'])
 
         self.prompt: str = colored("Scraping >> ", 'cyan')
@@ -53,6 +54,7 @@ class Cli(Cmd):
         defines what happens if command not recognized
         :param line: the input line
         """
+        self.error_flag = True
         print(f'{line} is not a valid option here. See help for more')
 
     def preloop(self) -> None:
@@ -73,6 +75,12 @@ class Cli(Cmd):
         clears std.out
         """
         os.system('clear')
+
+    def postcmd(self, stop: bool, line: str) -> bool:
+        if not self.error_flag:
+            self.preloop()
+        self.error_flag = False
+        return stop
 
     def completedefault(self, *ignored: List[str]) -> List[str]:
         """
@@ -189,6 +197,7 @@ class Cli(Cmd):
         args['password'] = args['password'] if 'password' in args.keys() else ""
         args['headless'] = True if 'headless' in args.keys() else False
 
+        self.error_flag = not is_valid
         return is_valid
 
     @staticmethod
@@ -203,7 +212,8 @@ class Cli(Cmd):
             try:
                 args[arg_key] = int(args[arg_key])
             except ValueError:
-                print(f'--{arg_key} value has to be integer, not {type(args[arg_key])}. | {args["start"]}')
+                print(colored(f'--{arg_key} value has to be integer, not {type(args[arg_key])}. | {args["start"]}',
+                              'red'))
                 return False
         return True
 
@@ -221,7 +231,7 @@ class Cli(Cmd):
         missing_req_args: List[str] = list(
             map(lambda arg: f'--{arg}', filter(lambda arg: arg not in received_args.keys(), required_args)))
         if missing_req_args:
-            print(f'Required arguments not specified: {missing_req_args}')
+            print(colored(f'Required arguments not specified: {missing_req_args}', 'red'))
             return False
 
         return True
@@ -238,19 +248,20 @@ class Cli(Cmd):
             if acc_arg[0] in received_args.keys():
                 values: List[str] = list(filter(lambda arg_str: arg_str, received_args[acc_arg[0]].split(" ")))
                 if acc_arg[2] == ArgumentType.FLAG and values:
-                    print(
-                        f'Flag parameter {acc_arg[0]} should not have a value{"s" if len(values) > 1 else ""}: {values}')
+                    print(colored(
+                        f'Flag parameter {acc_arg[0]} should not have a value{"s" if len(values) > 1 else ""}: {values}',
+                        'red'))
                     args_value_count_valid = args_value_count_valid and False
                 elif (acc_arg[2] == ArgumentType.SINGLE_STRING or acc_arg[2] == ArgumentType.SINGLE_INT) and len(
                         values) != 1:
-                    print(f'Excpected 1 parameter for {acc_arg[0]}, but: {values} were given.')
+                    print(colored(f'Excpected 1 parameter for {acc_arg[0]}, but: {values} were given.', 'red'))
                     args_value_count_valid = args_value_count_valid and False
                 elif acc_arg[2] == ArgumentType.SINGLE_INT and not self._arg_int_parsable(received_args, acc_arg[0]):
                     args_value_count_valid = args_value_count_valid and False
                 elif (acc_arg[2] == ArgumentType.MULTI_STRING or acc_arg[2] == ArgumentType.MULTI_INT) and len(
                         values) <= 1:
                     print(
-                        f'Excpected multiple parameter for {acc_arg[0]}, but only {len(values)} were given: {values}.')
+                        colored(f'Excpected multiple parameter for {acc_arg[0]}, but only {len(values)} were given: {values}.', 'red'))
                     args_value_count_valid = args_value_count_valid and False
                 elif acc_arg[2] == ArgumentType.MULTI_INT:
                     for value in values:
@@ -330,14 +341,14 @@ class Cli(Cmd):
                 import readline
                 self.old_completer = readline.get_completer()
                 readline.set_completer(self.complete)
-                readline.parse_and_bind(self.completekey+": complete")
+                readline.parse_and_bind(self.completekey + ": complete")
             except ImportError:
                 pass
         try:
             if intro is not None:
                 self.intro = intro
             if self.intro:
-                self.stdout.write(str(self.intro)+"\n")
+                self.stdout.write(str(self.intro) + "\n")
             stop = None
             while not stop:
                 if self.cmdqueue:
@@ -347,8 +358,9 @@ class Cli(Cmd):
                         try:
                             line = input(self.prompt)
                         except KeyboardInterrupt:
-                            #print('^C')
-                            print()
+                            self.error_flag = True
+                            print('^C')
+                            # print()
                             line = '\n'
                         except EOFError:
                             line = 'EOF'

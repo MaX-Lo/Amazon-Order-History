@@ -8,8 +8,7 @@ downloads and parses the data from amazon.de to store it in a orders.json file
 import datetime
 import json
 import logging
-from typing import List, Tuple, Optional, Dict, Any, Callable
-import time
+from typing import List, Tuple, Optional, Dict, Callable
 
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver import Firefox, FirefoxProfile
